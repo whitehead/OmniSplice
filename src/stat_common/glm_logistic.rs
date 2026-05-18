@@ -205,8 +205,6 @@ fn hyper_geom_test(a_succ: u64, a_fail: u64, b_succ: u64, b_fail: u64) -> Result
 
 impl GLM{
 
-   
-
     pub fn actual_test(&self) -> Result<(TestStatus, f64, f64, f64, f64), LogisticRegressionError> {
 
         let mut current_testStatus = TestStatus::Ok;

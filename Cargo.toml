@@ -1,15 +1,15 @@
 [package]
 name = "omni_splice"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2024"
 authors = ["Romain JSB Lannes", "rlannes@wi.mit.edu"]
 
 [dependencies]
 bio = "1"
-rust-htslib = { version = "0.45.0"}
+rust-htslib = "1.0.0"
 CigarParser = { git = "https://github.com/rLannes/CigarParser" }
 clap = { version = "4.5.16", features = ["derive"] }
-strand_specifier = { git = "https://github.com/rLannes/BAMstrandSpecifier" }
+strand_specifier = {version="0.2.1",  git = "https://github.com/rLannes/BAMstrandSpecifier" }
 regex = "*"
 lazy_static = "1.5.0"
 itertools = "*"

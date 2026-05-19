@@ -1,7 +1,5 @@
 Welcome to the omnisplice read me.
 
-Readme is currently (at 30/04) behind the CLI, please refers to the CLI help for the full list of options. 
-
 
 
 Omnisplice is a tool to categorize all reads present at exon's extremity.
@@ -17,6 +15,7 @@ This file follow the following organisation:
     - Context and discussion.
     - Algorithm overview
 
+Don't hesitate to open an issue if you have any problem or have any suggestions.
 
 ## To keep in mind
 The same read will be counted as many time as a read overlap different feature.
@@ -25,7 +24,7 @@ even it is the same position (different transcript same gene).
 
 ## Quick uses
 ```
-omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix>
+omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --anchor 3
 
 # specify the lib type for unstranded data
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --Libtype Unstranded
@@ -39,16 +38,17 @@ omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --read-to
 # then you need bowtie 2 in your OS path, plus a bowtie 2 reference for your genome
 backsplicing -i <omnisplice_out.clipped> -o <outputPrefix>> -b <bowtie2 ref> -g <gtf> -m <min clipped size, default 20> 
 
-# for comparison (Fisher test, GLM is available but we are still testing it)
-# select defect as appropriate for your study
-python omnisplice/compare_conditions.py --control control1.junction control2.junction --treatment treatment1.junction treatment2.junction --stat Fisher --defect  SPLICED UNSPLICED CLIPPED EXON_OTHER SKIPPED  --out <out file>
+# for comparison 
+compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file>
+
+# specific splicinfg factor
+compare_conditions run --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --splicing-fail  Unspliced Clipped Exon_other --splicing-ok Spliced
 
 
-# quick plot of genes (same as in manuscript)
+# quick plot of genes (barplot as in manuscript)
 coming out soon!
 ```
-
-
+python gene_visualisation.py --group1 control_S1.junctions control_S2.junctions --group1_name  Control --group2 mutant_S1.junctions mutant_S2.junctions --group2_name mutant  --gene_list gene_id1 gene_id2 --outfile_prefix outname
 
 
 ## Installation
@@ -64,23 +64,19 @@ you also need cmake. (brew install cmake on mac.)
 > cargo build --release
 # this is a compilation command it will output a bunch of text including some wanring
 # and should finish with: "Finished `release` profile [optimized] target(s) "
+you can add target directory to your path
 ```
 
 omnisplice executables will then be at <path>/omnisplice/target/release/omni_splice
 if you want to add it to your Path, you can add the release directory to your ~/.bashrc.
+example:
+export PATH=${PATH}:"<PATH TO>/omnisplice/target/release/"
 
-to do so 
-```
-> cd target/release/
-> pwd
-# copy the results of the pwd command.
-> vim  ~/.bashrc # on mac vim ~/.zshrc
-
-# 
-```
 
 if you encouter any error, have any questions, want to propose improvment
 or let us now by opening a new issue on this github.
+
+
 
 
 ### Rust installation
@@ -197,7 +193,7 @@ OmniSplice uses the flag from the alignment + the layout information (libtype ar
 
 
 ## Context and discussion.
-    OmniSplice surprisingly does not consume much ressource. Execution time will depend on the size of the bam, and the number of chromosome in the gtf. Memory time will depend on the number of "exon" Feature in the gtf .
+    OmniSplice does not consume much ressource. Execution time will depend on the size of the bam, and the number of chromosome in the gtf. Memory  will depend on the number of "exon" Feature in the gtf .
 
 
 
@@ -222,9 +218,9 @@ OmniSplice uses the flag from the alignment + the layout information (libtype ar
             * OverhangFail -> The read fail the overhang test.
             * Unexpected -> if you see this please open a bug report.
 
-    both table and junction file describe events. But the table file give the detail by exon end whereas the junction file give the results per junction.
+    both exon and junction file describe events. But the exon file give the detail by exon end whereas the junction file give the results per junction.
 
-    the table file (.tsv file):
+    the exon file (.tsv file):
         contig | gene_name | transcript_name | exon_number | ambiguous | strand | pos | next | exon_type | spliced | unspliced | clipped | exon_other | skipped  | wrong_strand | e_isoform
     
     the junction file (.tsv file):

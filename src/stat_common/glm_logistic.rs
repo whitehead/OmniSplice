@@ -119,7 +119,7 @@ impl Tester for GLM {
         }
 
         else if ! self.pass_min_read(min_read){
-            test_res.status = Some(TestStatus::EmptyData);
+            test_res.status = Some(TestStatus::FailFilter);
             return test_res;
         }
 
@@ -133,7 +133,8 @@ impl Tester for GLM {
             }
 
             match self.actual_test() {
-                Ok((status, pval, odr, ord_lower, odr_high)) => {
+                Ok((status, pval,
+                     odr, ord_lower, odr_high)) => {
                     test_res.status = Some(status);
                     test_res.p_value = Some(pval);
                     test_res.odd_ratio = Some(odr);
@@ -307,6 +308,11 @@ impl GLM{
     
     let se = GLM::standard_errors(&x_full, &beta_full, &n);
     let (or, or_lower, or_upper) = GLM::odds_ratio_with_ci(beta_full[1], se[1]);
+
+
+    // get predicted prob
+    //let p_control   = GLM::inv_logit(beta_full[0]);
+    //let p_treatment = GLM::inv_logit(beta_full[0] + beta_full[1]);
 
     // if it is really big > 100 most likely model collapsed fall back to Fisher
     if or > 100. || or < 0.001 {

@@ -242,7 +242,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     info!("\tFlag out: {}", args.flag_out);
     info!("\tMAPQ: {}", args.mapq);
     info!("\tReads to write: {:?}", args.read_to_write);
-    info!("\tReads to write junciton: {:?}", args.read_to_write_junc);
+    info!("\tReads to write junction: {:?}", args.read_to_write_junc);
     info!("\tUnspliced def: {:?}", args.unspliced_def);
     info!("\tSpliced def: {:?}", args.spliced_def);
     info!("\tLibrary type: {:?}", args.libtype);
@@ -263,6 +263,10 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         &output_file_prefix,
     );
 
+    let bam = rust_htslib::bam::Reader::from_path(&args.input).unwrap();
+    let header = rust_htslib::bam::Header::from_template(bam.header());
+    drop(bam);
+
     let header_handle_junc = "contig\tgene_id\ttranscript_id\tstrand\tJ_left\tJ_right\taln_start\tcigar\tsequence\n".as_bytes();
     let mut read_out_handle_jun = ReadToWriteHandleJunc::new();
         update_read_to_write_handle_junc(
@@ -270,6 +274,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         args.read_to_write_junc,
         header_handle_junc,
         &output_file_prefix,
+        &header
     );
 
 

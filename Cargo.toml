@@ -21,6 +21,7 @@ statrs = "0.18.0"
 adjustp = "*"
 rayon = "1.10"
 fishers_exact ="*"
+paste = '1.0.15'
 
 [[bin]]
 name = "omni_splice"

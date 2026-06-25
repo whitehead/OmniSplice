@@ -153,10 +153,10 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>, successes_cat: Vec<Sp
         }
         else{
             match x.status {
-                Some(TestStatus::TreatmentIsNull) | Some(TestStatus::ControlIsNull) => {
+                Some(TestStatus::TreatmentIsNull) | Some(TestStatus::ControlIsNull) | Some(TestStatus::FailFilter) => {
                     vec_err.push((&j, x));
                 } ,
-                _ => (),
+                _ => vec_err.push((&j, x)),
                 None => ()
             }
 
@@ -236,10 +236,9 @@ enum Commands {
        ambigious: bool,
 
        /// Minimum read count for test. Discards junctions (p-value = NaN):
-       /// if control fail AND treat fail < min_read OR control sucess OR treat success . Filters out significant
+       /// if control fail AND treat fail < min_read OR (control sucess OR treat success) < min_reads . Filters out significant
        /// calls driven by sparse, inconsistent observations across replicates.
        /// Default: 0 | Recommended: 0–5
-       /// This is a pretty aggressive filter use it with caution
        #[arg( long, default_value_t = 0)]
        min_read: u32,
 
@@ -262,8 +261,7 @@ enum Commands {
 
        /// Minimum read count for  test. Discards junctions (p-value = NaN) if control fail or treat fail < min_read OR control sucess or treat success. Filters out significant
        /// calls driven by sparse, inconsistent observations across replicates.
-       /// Default: 0 | Recommended: 0–5
-       /// This is a pretty aggressive filter use it with caution
+       /// Default: 0 | Recommended: 5-10
        #[arg( long, default_value_t = 0)]
        min_read: u32,
 

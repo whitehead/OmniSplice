@@ -8,6 +8,7 @@ get more info reading the paper: https://www.biorxiv.org/content/10.1101/2025.04
 This file follow the following organisation:
 
     - Quick uses
+    - 
     - Installation
     - Input Files
     - Command details
@@ -24,6 +25,8 @@ even it is the same position (different transcript same gene).
 
 ## Quick uses
 ```
+
+you first need to run OmniSplice:
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --anchor 3
 
 # specify the lib type for unstranded data
@@ -31,6 +34,11 @@ omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --Libtype
 
 # extending the overhang to 5 pb
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --overhang 5 
+
+
+# to get exon_others and associated bam files:
+omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --read-to-write-junc  exon-other clipped
+
 
 # for backsplicing you need to first extract the clipped reads
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --read-to-write soft-clipped

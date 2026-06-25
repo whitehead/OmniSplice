@@ -17,6 +17,7 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::str::FromStr;
 use strand_specifier_lib::Strand;
+use paste::paste;
 
 #[derive(Debug)]
 pub struct Intervall {
@@ -73,115 +74,67 @@ macro_rules! get_header {
     };
 }
 
-pub(crate) use get_header;
 
+macro_rules! init_handles {
+    ($handle:expr, $field:ident, $ext:literal, $prefix:expr, $file_header:expr, $bam_header:expr) => {
+        let out_path = format!("{}{}", $prefix, $ext);
+        $handle.$field = Some(BufWriter::new(
+            File::create_new(out_path.clone())
+                .unwrap_or_else(|_| panic!("{} file should not exists", $ext))
+        ));
+
+        $handle.$field
+            .as_mut()
+            .unwrap()
+            .write_all($file_header)
+            .expect("Unable to write to  file");
+
+        let path = format!("{}{}", out_path, ".bam");
+        paste!{
+        $handle.[<$field _bam>] = Some(rust_htslib::bam::Writer::from_path(path, $bam_header, rust_htslib::bam::Format::Bam)
+            .unwrap_or_else(|_| panic!("file should not exists")));
+        }
+    };
+}
+
+pub(crate) use get_header;
 use crate::common::error::OmniError;
 pub fn update_read_to_write_handle_junc(
     read_out_handle: &mut ReadToWriteHandleJunc,
     read_to_write: Vec<ReadsToWriteSEvent>,
     header_reads_handle: &[u8],
     output_file_prefix: &str,
-) {
+    bam_header: &rust_htslib::bam::Header
+) -> (){
         
     for e in read_to_write {
         match e {
             ReadsToWriteSEvent::ExonOther => {
-                read_out_handle.exon_other = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".exonOther"))
-                        .unwrap_or_else(|_| panic!("exonOther file should not exist.")),
-                ));
-                read_out_handle
-                    .exon_other
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                // macros defines directy up this function. will inititalize the handle for the output file and bam file
+                init_handles!(read_out_handle, exon_other, ".exonOther", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::Isoform => {
-                read_out_handle.isoform = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".isoform"))
-                        .unwrap_or_else(|_| panic!("Isoform file should not exist.")),
-                ));
-                read_out_handle
-                    .isoform
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, isoform, ".isoform", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::Spliced => {
-                read_out_handle.spliced = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".spliced"))
-                        .unwrap_or_else(|_| panic!("Spliced file should not exist.")),
-                ));
-                read_out_handle
-                    .spliced
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, spliced, ".spliced", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::Unspliced => {
-                read_out_handle.unspliced = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".unspliced"))
-                        .unwrap_or_else(|_| panic!("Unspliced file should not exist.")),
-                ));
-                read_out_handle
-                    .unspliced
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, unspliced, ".unspliced", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::Clipped => {
-                read_out_handle.clipped = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".clipped"))
-                        .unwrap_or_else(|_| panic!("Clipped file should not exist.")),
-                ));
-                read_out_handle
-                    .clipped
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, clipped, ".clipped", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::WrongStrand => {
-                read_out_handle.wrong_strand = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".wrongStrand"))
-                        .unwrap_or_else(|_| panic!("WrongStrand file should not exist.")),
-                ));
-                read_out_handle
-                    .wrong_strand
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, wrong_strand, ".wrongStrand", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::Skipped => {
-                read_out_handle.skipped = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".skipped"))
-                        .unwrap_or_else(|_| panic!("Skipped file should not exist.")),
-                ));
-                read_out_handle
-                    .skipped
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, skipped, ".skipped", output_file_prefix, header_reads_handle, bam_header);
             },
             ReadsToWriteSEvent::SkippedUnrelated => {
-                read_out_handle.spliced = Some(BufWriter::new(
-                    File::create_new(format!("{}{}", output_file_prefix, ".spliced"))
-                        .unwrap_or_else(|_| panic!("spliced file should not exist.")),
-                ));
-                read_out_handle
-                    .skipped_unrelated
-                    .as_mut()
-                    .unwrap()
-                    .write_all(header_reads_handle)
-                    .expect("Unable to write file");
+                init_handles!(read_out_handle, skipped_unrelated, ".skippedUnrelated", output_file_prefix, header_reads_handle, bam_header);
             },
-                    }
+        }
     }
 }
 
@@ -206,7 +159,17 @@ pub struct ReadToWriteHandleJunc {
     pub wrong_strand: Option<BufWriter<File>>,
     pub skipped: Option<BufWriter<File>>,
     pub skipped_unrelated: Option<BufWriter<File>>,
+
+    pub exon_other_bam: Option<rust_htslib::bam::Writer>,
+    pub spliced_bam: Option<rust_htslib::bam::Writer>, 
+    pub isoform_bam: Option<rust_htslib::bam::Writer>,
+    pub unspliced_bam: Option<rust_htslib::bam::Writer>,
+    pub clipped_bam: Option<rust_htslib::bam::Writer>,
+    pub wrong_strand_bam: Option<rust_htslib::bam::Writer>,
+    pub skipped_bam: Option<rust_htslib::bam::Writer>,
+    pub skipped_unrelated_bam: Option<rust_htslib::bam::Writer>,
 }
+
 impl ReadToWriteHandleJunc {
 
     pub fn new() -> Self {
@@ -219,6 +182,14 @@ impl ReadToWriteHandleJunc {
             wrong_strand: None,
             skipped: None,
             skipped_unrelated: None,
+            exon_other_bam: None,
+            spliced_bam: None, 
+            isoform_bam: None,
+            unspliced_bam: None,
+            clipped_bam: None,
+            wrong_strand_bam: None,
+            skipped_bam: None,
+            skipped_unrelated_bam: None,
         }
     }
 
@@ -255,6 +226,39 @@ impl ReadToWriteHandleJunc {
             Some(ref mut handle) => handle.flush(),
             _ => Ok(()),
         };
+     /*match self.exon_other_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+    match self.spliced_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+        match self.isoform_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+        match self.unspliced_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+        match self.clipped_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+    match self.wrong_strand_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+        match self.skipped_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };
+        match self.skipped_unrelated_bam {
+                Some(ref mut handle) => handle.flush(),
+            _ => Ok(()),
+        };*/
+ 
     Ok(())
     }
 }

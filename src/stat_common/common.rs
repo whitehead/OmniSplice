@@ -410,7 +410,8 @@ pub enum TestStatus {
     SingularMatrix,
     PerfectSeparation,
     FisherFallBack,
-    HyperGeom
+    HyperGeom,
+    FailFilter
 }
 
 
@@ -419,6 +420,7 @@ impl fmt::Display for TestStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 
         match self {
+            
             TestStatus::Ok => { write!(f, "Ok") },
             TestStatus::QuasiPerfectSeparation => { write!(f, "QuasiPerfectSeparation") },
             TestStatus::DimensionMistmatch => { write!(f, "DimensionMistmatch") },
@@ -436,7 +438,8 @@ impl fmt::Display for TestStatus {
             TestStatus::NumericalInstability => { write!(f, "NumericalInstability") },
             TestStatus::SingularMatrix => { write!(f, "SingularMatrix") },
             TestStatus::PerfectSeparation => { write!(f, "PerfectSeparation") },
-            TestStatus::FisherFallBack => { write!(f, "FisherTest")}
+            TestStatus::FisherFallBack => { write!(f, "FisherTest")},
+            TestStatus::FailFilter => { write!(f, "Failfilter") }
         }
     }
 }
@@ -478,9 +481,11 @@ pub struct TestResults{
     pub control_success: u32,
     pub control_failure: u32,
     pub control_prop: Option<f32>,
+    pub predicted_control_prop: Option<f32>,
     pub treatment_success: u32,
     pub treatment_failure: u32,
     pub treatment_prop: Option<f32>,
+    pub predicted_treatment_prop: Option<f32>,
     pub status: Option<TestStatus>,
     // Only available if model fit succeeded
     pub p_value: Option<f64>,
@@ -496,7 +501,9 @@ impl TestResults{
         TestResults { control_success: 0, control_failure: 0, control_prop: None,
                       treatment_success: 0, treatment_failure: 0, treatment_prop: None,
                       status: None, p_value: None,
-                      odd_ratio: None, or_ci_lower: None, or_ci_upper: None, string_count: ("".to_string(), "".to_string(), "".to_string(), "".to_string())}
+                      predicted_treatment_prop: None, predicted_control_prop: None,
+                      odd_ratio: None, or_ci_lower: None,
+                      or_ci_upper: None, string_count: ("".to_string(), "".to_string(), "".to_string(), "".to_string())}
     }
 
     fn helper_(value: Option<f32>) -> String{

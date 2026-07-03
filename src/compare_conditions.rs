@@ -129,8 +129,10 @@ fn parse_results_update_vec(vec_r: &Vec<(&JunctionStats, TestResults)>,
 }
 
 
-fn run_one_test(junction: &HashMap<String, JunctionStats>, successes_cat: Vec<SplicingCategory>,
-                 failures_cat: Vec<SplicingCategory>, out_file_path: &str, ambi: bool, min_read: u32) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
+fn run_one_test(junction: &HashMap<String, JunctionStats>,
+                successes_cat: Vec<SplicingCategory>,
+                 failures_cat: Vec<SplicingCategory>, out_file_path: &str,
+                  ambi: bool, min_cover: u32, min_fail:u32) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
 
     
     info!("Starting test!");
@@ -144,10 +146,10 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>, successes_cat: Vec<Sp
                                                 &failures_cat,
                                             k.to_owned());
         if ambi == false && j.ambiguous == true{
-            x = glm.test(true, min_read);
+            x = glm.test(true, min_cover, min_fail);
         }
         else {
-            x = glm.test(false, min_read);
+            x = glm.test(false, min_cover, min_fail);
         }
         if x.p_value.is_some(){
             vec_ok.push((&j, x));
@@ -184,7 +186,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>, successes_cat: Vec<Sp
 
     out_stream.write(format!("#success: {}\n", successes_cat.into_iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ")).to_string().as_bytes());
     out_stream.write(format!("#failures: {}\n", failures_cat.into_iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ")).to_string().as_bytes());
-    out_stream.write(format!("#min_read: {}; test: GLM Binomial: (successes + failures) ~ group\n", min_read).to_string().as_bytes());
+    out_stream.write(format!("#min_read: {}; min_fail {} test: GLM Binomial: (successes + failures) ~ group\n", min_cover, min_fail).to_string().as_bytes());
     let header = vec!["chr", "strand", "start", "end", "statistic", "p_value", "q_value", "status", "control_success", "control_failures", "control_ratio", "treatment_success", "treatment_failures", "treatment_ratio",  "gene_transcript_intron"];
     out_stream.write(format!("{}\n", header.join("\t")).as_bytes());
     for e in final_{
@@ -236,13 +238,15 @@ enum Commands {
        #[arg( long,)]
        ambigious: bool,
 
-       /// Minimum read count for test. Discards junctions (p-value = NaN):
-       /// if control fail AND treat fail < min_read OR (control sucess OR treat success) < min_reads . Filters out significant
-       /// calls driven by sparse, inconsistent observations across replicates.
-       /// Default: 0 | Recommended: 0–5
+       /// Minimum read count for test succes + failure in each group must be >= min_read. Discards junctions (p-value = NaN) .
+       /// Default: 0 | Recommended: 5-10
        #[arg( long, default_value_t = 0)]
        min_read: u32,
 
+        /// Minimum unspliced read count for test  failure in at least one group must be >= min_fail. Discards junctions (p-value = NaN) .
+       /// Default: 0 | Recommended: 5-10
+       #[arg( long, default_value_t = 0)]
+       min_fail: u32,
 
 
     },
@@ -260,11 +264,15 @@ enum Commands {
         #[arg(short, long, num_args = 1.., required = true)]
         treatment_files: Vec<PathBuf>,
 
-       /// Minimum read count for  test. Discards junctions (p-value = NaN) if control fail or treat fail < min_read OR control sucess or treat success. Filters out significant
-       /// calls driven by sparse, inconsistent observations across replicates.
+       /// Minimum read count for test succes + failure in each group must be >= min_read. Discards junctions (p-value = NaN) .
        /// Default: 0 | Recommended: 5-10
        #[arg( long, default_value_t = 0)]
        min_read: u32,
+
+        /// Minimum unspliced read count for test  failure in at least one group must be >= min_fail. Discards junctions (p-value = NaN) .
+       /// Default: 0 | Recommended: 5-10
+       #[arg( long, default_value_t = 0)]
+       min_fail: u32,
 
     },
 }
@@ -291,7 +299,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     match cli.command {
         Commands::Run { outfile, control_files,
                         treatment_files, splicing_ok,
-                        splicing_fail, ambigious, min_read } => {
+                        splicing_fail, ambigious, min_read , min_fail} => {
         
             println!("Running comparison, output: {:?}", outfile);
             let control = parse_cat(splicing_ok)?;
@@ -313,11 +321,12 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 
         run_one_test( &res, control,
-                 treatment,  outfile.to_str().unwrap(),  ambigious, min_read)?;
+                 treatment,  outfile.to_str().unwrap(), 
+                  ambigious, min_read, min_fail)?;
                 //run_one_test
             // Your run logic here
         }
-        Commands::RunAll { control_files, treatment_files, outfile_prefix, min_read } => {
+        Commands::RunAll { control_files, treatment_files, outfile_prefix, min_read , min_fail} => {
             println!("Running all single comparisons, output: {:?}", outfile_prefix);
                 
             let mut res:  HashMap<String, JunctionStats> = HashMap::with_capacity(1_000_000);
@@ -349,50 +358,50 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut p = Path::new(&outfile_prefix).to_path_buf();
 
 
-    let mut jobs: Vec<(Vec<SplicingCategory>, Vec<SplicingCategory>, &str, bool, u32)> = Vec::new();
+    let mut jobs: Vec<(Vec<SplicingCategory>, Vec<SplicingCategory>, &str, bool, u32, u32)> = Vec::new();
     let mut p = Path::new(&outfile_prefix).to_path_buf();
 
     let _ = p.set_extension("Unspliced.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Unspliced],
-       p.to_str().unwrap() , false, min_read));
+       p.to_str().unwrap() , false, min_read, min_fail));
 
     let mut p = Path::new(&outfile_prefix).to_path_buf();
     let _ = p.set_extension("WrongStrand.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::WrongStrand],
-       p.to_str().unwrap() , false, min_read));
+       p.to_str().unwrap() , false, min_read, min_fail));
 
     let mut p = Path::new(&outfile_prefix).to_path_buf();
     let _ = p.set_extension("Skipped.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Skipped],
-       p.to_str().unwrap() , false, min_read));
+       p.to_str().unwrap() , false, min_read, min_fail));
     
     let mut p = Path::new(&outfile_prefix).to_path_buf();
     let _ = p.set_extension("SkippedUnrelated.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::SkippedUnrelated],
-       p.to_str().unwrap() , false, min_read));
+       p.to_str().unwrap() , false, min_read, min_fail));
     
     let mut p = Path::new(&outfile_prefix).to_path_buf();
     let _ = p.set_extension("Clipped.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Clipped],
-       p.to_str().unwrap() , false, min_read));
+       p.to_str().unwrap() , false, min_read, min_fail));
 
     let mut p = Path::new(&outfile_prefix).to_path_buf();
     let _ = p.set_extension("ExonOther.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::ExonOther],
-       p.to_str().unwrap(), true, min_read));
+       p.to_str().unwrap(), true, min_read, min_fail));
        
     let mut p = Path::new(&outfile_prefix).to_path_buf();
     let _ = p.set_extension("Isoform.tsv");
     jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::EIsoform],
-       p.to_str().unwrap() , false, min_read));
+       p.to_str().unwrap() , false, min_read, min_fail));
 
 
     //println!("{:?}", );
     let now = Instant::now();
     let ok = jobs.into_par_iter().
-    try_for_each(|(a, b, c, d, m)| {
+    try_for_each(|(a, b, c, d, m, mf)| {
         let shared_ref = Arc::clone(&shared);
-        run_one_test(&shared_ref, a, b, c, d, m)
+        run_one_test(&shared_ref, a, b, c, d, m, mf)
     });
     match ok {
         Ok(()) => println!("All four tests finished successfully."),

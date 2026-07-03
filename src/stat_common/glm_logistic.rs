@@ -61,19 +61,16 @@ impl GLM {
     }
 
 
-    fn pass_min_read(&self, min_read: u32) -> bool{
-        
-         let (g1_succ, g1_fail, g2_succ, g2_fail) = self.get_sub_vec();
-
-        if (g1_fail.iter().sum::<u32>() < min_read) && (g2_fail.iter().sum::<u32>() < min_read){
-            return false
+    fn pass_min_read(&self, min_cover: u32, min_unspliced: u32) -> bool {
+        let (g1_succ, g1_fail, g2_succ, g2_fail) = self.get_sub_vec();
+        if (g1_fail.iter().sum::<u32>() + g1_succ.iter().sum::<u32>() < min_cover) ||
+                 (g2_fail.iter().sum::<u32>() + g2_succ.iter().sum::<u32>() < min_cover){
+            return false;
         }
-
-        if (g1_succ.iter().sum::<u32>() < min_read) || (g2_succ.iter().sum::<u32>() < min_read){
-            return false
+        if g1_fail.iter().sum::<u32>() < min_unspliced && g2_fail.iter().sum::<u32>() < min_unspliced{
+            return false;
         }
-
-        return true
+        true
     }
 }
 
@@ -86,7 +83,7 @@ impl Tester for GLM {
     fn groups(&self) -> &Vec<Genotype>{&self.groups}
     fn groups_mut(&mut self) -> &mut Vec<Genotype>{&mut self.groups}
 
-    fn test(&self, donotrun: bool, min_read: u32) -> TestResults {
+    fn test(&self, donotrun: bool,  min_coverage: u32, min_failure: u32) -> TestResults {
 
         let mut test_res = TestResults::get_empty();
         let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = self.get_proportion();
@@ -113,7 +110,7 @@ impl Tester for GLM {
             return test_res;
         }
 
-        else if ! self.pass_min_read(min_read){
+        else if ! self.pass_min_read( min_coverage, min_failure){
             test_res.status = Some(TestStatus::FailFilter);
             return test_res;
         }

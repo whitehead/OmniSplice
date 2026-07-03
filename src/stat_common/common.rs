@@ -432,7 +432,7 @@ pub trait Tester{
         (ctrl_suc.join(","), ctrl_fail.join(","), treat_suc.join(","), treat_fail.join(","))
     }
 
-    fn test(&self, donotrun: bool, min_read: u32) -> TestResults; // donotrun in case we just need to recover prop data but not run test i.e. ambiguous sample
+    fn test(&self, donotrun: bool, min_coverage: u32, min_failure: u32) -> TestResults; // donotrun in case we just need to recover prop data but not run test i.e. ambiguous sample
     fn success(&self) -> &Vec<u32>;
     fn success_mut(&mut self) -> &mut Vec<u32>;
     fn failures(&self) -> &Vec<u32>;
@@ -460,7 +460,9 @@ pub enum TestStatus {
     PerfectSeparation,
     FisherFallBack,
     HyperGeom,
-    FailFilter
+    FailFilter,
+    CIUnavail,
+    OddRatioUnavail
 }
 
 
@@ -489,6 +491,8 @@ impl fmt::Display for TestStatus {
             TestStatus::PerfectSeparation => { write!(f, "PerfectSeparation") },
             TestStatus::FisherFallBack => { write!(f, "FisherTest")},
             TestStatus::FailFilter => { write!(f, "Failfilter") }
+            TestStatus::CIUnavail => { write!(f, "CIUnavailable") },
+            TestStatus::OddRatioUnavail => { write!(f, "ORUnavailable") },
         }
     }
 }
@@ -518,8 +522,10 @@ impl From<LogisticRegressionError> for TestStatus {
 
             LogisticRegressionError::ControlIsNull => TestStatus::ControlIsNull,
 
-            LogisticRegressionError::TreatmentIsNull => TestStatus::TreatmentIsNull
+            LogisticRegressionError::TreatmentIsNull => TestStatus::TreatmentIsNull,
 
+            LogisticRegressionError::CIUnavail(_) => TestStatus::CIUnavail,
+            LogisticRegressionError::oddRatioError => TestStatus::OddRatioUnavail,
         }
         
     }

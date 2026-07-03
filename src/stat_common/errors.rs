@@ -43,7 +43,13 @@ pub enum LogisticRegressionError {
     ControlIsNull,
 
     #[error("TreatmentIsNullDataError: No observation for treatment (all zeroes)")]
-    TreatmentIsNull
+    TreatmentIsNull,
+
+    #[error("Cold not compute Confidence Interval err: {0}")]
+    CIUnavail(String),
+
+    #[error("Cold not compute Odd ratio")]
+    oddRatioError
 }
 
 

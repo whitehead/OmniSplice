@@ -49,7 +49,10 @@ pub enum LogisticRegressionError {
     CIUnavail(String),
 
     #[error("Cold not compute Odd ratio")]
-    oddRatioError
+    oddRatioError,
+
+    #[error("fall back to Fisher")]
+    FailUseFisher
 }
 
 

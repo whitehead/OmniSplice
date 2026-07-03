@@ -443,7 +443,7 @@ pub trait Tester{
 
 
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum TestStatus {
     Ok,
     QuasiPerfectSeparation,
@@ -526,6 +526,7 @@ impl From<LogisticRegressionError> for TestStatus {
 
             LogisticRegressionError::CIUnavail(_) => TestStatus::CIUnavail,
             LogisticRegressionError::oddRatioError => TestStatus::OddRatioUnavail,
+            LogisticRegressionError::FailUseFisher => TestStatus::FisherFallBack
         }
         
     }

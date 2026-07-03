@@ -1,6 +1,6 @@
 use super::super::common::error::OmniError;
 use super::errors::LogisticRegressionError;
-use super::common::{Genotype, Tester, CountsStats, SplicingCategory, JunctionStats, TestResults, TestStatus};
+use super::common::{Genotype, Tester, CountsStats, SplicingCategory, JunctionStats, TestResults, TestStatus, hyper_geom_test};
 //use fishers_exact::fishers_exact;
 use statrs::stats_tests::fishers_exact;
 use statrs::stats_tests::Alternative;
@@ -9,7 +9,7 @@ use statrs::distribution::{Discrete, DiscreteCDF, Hypergeometric};
 use statrs::statistics::Distribution;
 use statrs::prec;
 use statrs::statistics::{Min, Max};
-
+use statrs::function::gamma::ln_gamma;
 
 use core::f64;
 use std::collections::{HashMap, HashSet};
@@ -72,12 +72,7 @@ impl GLM {
         if (g1_succ.iter().sum::<u32>() < min_read) || (g2_succ.iter().sum::<u32>() < min_read){
             return false
         }
-        /*if self.success.iter().any(|x| *x < min_read){
-            return false
-        }
-        if self.failures.iter().any(|x| *x < min_read){
-            return false
-        }*/
+
         return true
     }
 }
@@ -155,52 +150,10 @@ impl Tester for GLM {
     }
     
 }
+
 fn vec_to_array<T, const N: usize>(v: Vec<T>) -> [T; N] {
     v.try_into()
         .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
-}
-
-
-/// use hyper geom test to compute 2 tailed p-value 
-/// the fischer test was returning some negative pvalue?
-/// hopefully this works!
-
-fn hyper_geom_test(a_succ: u64, a_fail: u64, b_succ: u64, b_fail: u64) -> Result<f64, OmniError>{
-
-    let cond_a = a_succ + a_fail;
-    let cond_b = b_succ + b_fail;
-    // missing data no meaning
-    if (cond_a == 0) && (cond_b == 0){
-        return Ok(-1.);
-    }
-    let succes = a_succ + b_succ;
-    let fail = b_fail + a_fail;
-    // all succes / all failure no point
-    if (fail == 0) && (succes == 0){
-        return Ok(1.)
-    }
-    
-    let pop = succes + fail;
-
-    let n = Hypergeometric::new(pop, succes, cond_a).unwrap();
-    let k = a_succ;
-
-    let p_k = n.pmf(k);
-    let mut p_value: f64 = 0.;
-    let log_p_k = n.ln_pmf(k);
-
-    let log_term:Vec<f64> = (n.min()..=n.max())
-            .map(|i| n.ln_pmf(i))
-            .filter(|&lp| lp <= log_p_k + 1e-10)
-            .collect();
-
-    
-    if log_term.is_empty(){
-        return Ok(1.0)
-    }
-    let max_lp = log_term.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let p_val = (max_lp + log_term.iter().map(|&lp| (lp - max_lp).exp()).sum::<f64>().ln()).exp();
-    return  Ok(p_val.min(1.0))
 }
 
 
@@ -238,17 +191,6 @@ impl GLM{
                     Err(e) => { return Err(LogisticRegressionError::HyperGeomError); }
                 }
                 
-
-               /* let mut p = fishers_exact(&vec_to_array(contingency.clone()), Alternative::TwoSided).unwrap();
-                // likely a bug that make it negative in case of extreme separation
-                if (p < 0.) {
-                    p = 0.;
-                }
-                let mut odd_ratio = 0. ;
-                if  (contingency[1] != 0) && (contingency[3] != 0){
-                    odd_ratio = (contingency[0] as f64 / contingency[1] as f64 ) /(contingency[2] as f64 / contingency[3] as f64 );
-                }
-            return Ok((TestStatus::FisherFallBack, p, odd_ratio,  0. as f64 , 0. as f64)); */
             }
 
 
@@ -531,7 +473,7 @@ impl GLM{
     ///
     /// # Note
     /// Input values should be strictly between 0 and 1 to avoid infinity/NaN
-    fn logit(p: f64) -> Result<f64, LogisticRegressionError> {
+    pub fn logit(p: f64) -> Result<f64, LogisticRegressionError> {
         if p <= 0. || p >= 1. {return Err(LogisticRegressionError::InvalidProbability(p))};
         Ok((p / (1.0 - p)).ln())
 
@@ -546,7 +488,7 @@ impl GLM{
     ///
     /// # Returns
     /// A probability: 1 / (1 + exp(-x))
-    fn inv_logit(x: f64) -> f64 {
+    pub fn inv_logit(x: f64) -> f64 {
         1.0 / (1.0 + (-x).exp())
     }
 
@@ -562,7 +504,7 @@ impl GLM{
     ///
     /// # Note
     /// Probabilities are clamped to [1e-10, 1-1e-10] to prevent log(0)
-    fn binomial_log_likelihood(y: &[f64], n: &[f64], mu: &[f64]) -> f64 {
+    pub fn binomial_log_likelihood(y: &[f64], n: &[f64], mu: &[f64]) -> f64 {
 
         y.iter()
             .zip(n.iter())
@@ -586,7 +528,7 @@ impl GLM{
     ///
     /// # Note
     /// The odds ratio is exp(β), and the CI is computed as exp(β ± 1.96·SE)
-    fn odds_ratio_with_ci(beta: f64, std_error: f64) -> (f64, f64, f64) {
+    pub fn odds_ratio_with_ci(beta: f64, std_error: f64) -> (f64, f64, f64) {
         let or = beta.exp();
         let lower = (beta - 1.96 * std_error).exp();
         let upper = (beta + 1.96 * std_error).exp();
@@ -605,7 +547,7 @@ impl GLM{
     ///
     /// # Returns
     /// Vector of standard errors for each coefficient
-    fn standard_errors(x: &DMatrix<f64>, beta: &DVector<f64>, n: &DVector<f64>) -> DVector<f64> {
+    pub fn standard_errors(x: &DMatrix<f64>, beta: &DVector<f64>, n: &DVector<f64>) -> DVector<f64> {
         let eta = x * beta;
         let mu: Vec<f64> = eta.iter().map(|&e| GLM::inv_logit(e)).collect();
         
@@ -632,7 +574,7 @@ impl GLM{
 
 
     /// Validate the input to shield against the most common error
-    fn validate_irls_inputs(x: &DMatrix<f64>, y: &DVector<f64>, n: &DVector<f64>) -> Result<(), LogisticRegressionError>{
+    pub fn validate_irls_inputs(x: &DMatrix<f64>, y: &DVector<f64>, n: &DVector<f64>) -> Result<(), LogisticRegressionError>{
 
 
         let n_obs = x.nrows();
@@ -708,31 +650,3 @@ impl GLM{
 
 
 
-
-#[cfg(test)]
-mod tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-    use super::*;
-
-    #[test]
-    fn glm_test() {
-        let mut glm= GLM{
-            groups: vec![Genotype::CONTROL, Genotype::CONTROL, Genotype::CONTROL,
-                     Genotype::TREATMENT, Genotype::TREATMENT, Genotype::TREATMENT], 
-            success: vec![1,0,0,22,1,2],
-            failures: vec![4,1,2,0,0,0],
-            identifier: "Non".to_string()
-        };
-        // should be non significant but I found it at 10-7
-        let x = glm.test(false, 0);
-        println!("x: {:?}", x);
-    }
-    #[test]
-    fn hyper_geom_test1(){ //(a_succ: u64, a_fail: u64, b_succ: u64, b_fail: u64){
-        let x= hyper_geom_test(50, 0, 45, 1);
-        println!("{:?}", x);
-
-    }
-
-
-}

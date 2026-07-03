@@ -22,6 +22,7 @@ mod stat_common;
 use stat_common::errors::LogisticRegressionError;
 use stat_common::common::{Tester, parse_js_file, Genotype, JunctionStats, SplicingCategory};
 use stat_common::glm_logistic::{GLM};
+use stat_common::glm_beta_binomial::GLMBetaBinomiale;
 
 mod common;
 
@@ -137,7 +138,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>, successes_cat: Vec<Sp
     let mut vec_err: Vec<(&JunctionStats, TestResults)> = Vec::new();
     let mut x: TestResults; 
     for (k, j ) in junction.iter(){
-        let mut glm = GLM::new(  &j.control_count,
+        let mut glm = GLMBetaBinomiale::new(  &j.control_count,
                                         &j.treat_count,
                                                 &successes_cat,
                                                 &failures_cat,

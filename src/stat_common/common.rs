@@ -18,6 +18,55 @@ use crate::common::utils::ReadAssign;
 
 use super::super::common::error::OmniError;
 use super::errors::LogisticRegressionError;
+use statrs::distribution::{Discrete, DiscreteCDF, Hypergeometric};
+use statrs::statistics::{Min, Max};
+
+
+/// use hyper geom test to compute 2 tailed p-value 
+/// the fischer test was returning some negative pvalue?
+/// hopefully this works!
+
+pub fn hyper_geom_test(a_succ: u64, a_fail: u64, b_succ: u64, b_fail: u64) -> Result<f64, OmniError>{
+
+    let cond_a = a_succ + a_fail;
+    let cond_b = b_succ + b_fail;
+    // missing data no meaning
+    if (cond_a == 0) && (cond_b == 0){
+        return Ok(-1.);
+    }
+    let succes = a_succ + b_succ;
+    let fail = b_fail + a_fail;
+    // all succes / all failure no point
+    if (fail == 0) && (succes == 0){
+        return Ok(1.)
+    }
+    
+    let pop = succes + fail;
+
+    let n = Hypergeometric::new(pop, succes, cond_a).unwrap();
+    let k = a_succ;
+
+    let p_k = n.pmf(k);
+    let mut p_value: f64 = 0.;
+    let log_p_k = n.ln_pmf(k);
+
+    let log_term:Vec<f64> = (n.min()..=n.max())
+            .map(|i| n.ln_pmf(i))
+            .filter(|&lp| lp <= log_p_k + 1e-10)
+            .collect();
+
+    
+    if log_term.is_empty(){
+        return Ok(1.0)
+    }
+    let max_lp = log_term.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let p_val = (max_lp + log_term.iter().map(|&lp| (lp - max_lp).exp()).sum::<f64>().ln()).exp();
+    return  Ok(p_val.min(1.0))
+}
+
+
+
+
  #[derive(Debug)]
 pub struct CountsStats{
     spliced: u32,

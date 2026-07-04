@@ -109,18 +109,19 @@ fn parse_results_update_vec(vec_r: &Vec<(&JunctionStats, TestResults)>,
 
         value = t.string_count.clone();
 
-        f.push(value.2);
-        f.push(value.3);
-        f.push(  match t.treatment_prop {
-            Some(c) => c.to_string(),
-            None => "nan".to_string(),}
-        );
 
         f.push(value.0);
         f.push(value.1);
         f.push(   match t.control_prop {
                         Some(c) => c.to_string(),
                         None => "nan".to_string()}
+        );
+
+        f.push(value.2);
+        f.push(value.3);
+        f.push(  match t.treatment_prop {
+            Some(c) => c.to_string(),
+            None => "nan".to_string(),}
         );
 
         f.push(j.gene_tr.iter().map(|x| x.to_owned()).collect::<Vec<String>>().join(";"));
@@ -140,8 +141,9 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
     let mut vec_err: Vec<(&JunctionStats, TestResults)> = Vec::new();
     let mut x: TestResults; 
     for (k, j ) in junction.iter(){
-        let mut glm = GLMBetaBinomiale::new(  &j.control_count,
+        let mut glm = GLMBetaBinomiale::new(  
                                         &j.treat_count,
+                                        &j.control_count,                                      
                                                 &successes_cat,
                                                 &failures_cat,
                                             k.to_owned());
@@ -165,7 +167,8 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
 
         }
     }
-    
+
+
     let pval = vec_ok.iter().map(|x| x.1.p_value.unwrap() as f64).collect::<Vec<f64>>();
     let mut qvalues = adjust(&pval, Procedure::BenjaminiHochberg);
 
@@ -239,13 +242,13 @@ enum Commands {
        ambigious: bool,
 
        /// Minimum read count for test succes + failure in each group must be >= min_read. Discards junctions (p-value = NaN) .
-       /// Default: 0 | Recommended: 5-10
-       #[arg( long, default_value_t = 0)]
+       /// Default: 30 |
+       #[arg( long, default_value_t = 30)]
        min_read: u32,
 
         /// Minimum unspliced read count for test  failure in at least one group must be >= min_fail. Discards junctions (p-value = NaN) .
-       /// Default: 0 | Recommended: 5-10
-       #[arg( long, default_value_t = 0)]
+       /// Default: 10 | 
+       #[arg( long, default_value_t = 10)]
        min_fail: u32,
 
 
@@ -265,13 +268,13 @@ enum Commands {
         treatment_files: Vec<PathBuf>,
 
        /// Minimum read count for test succes + failure in each group must be >= min_read. Discards junctions (p-value = NaN) .
-       /// Default: 0 | Recommended: 5-10
-       #[arg( long, default_value_t = 0)]
+       /// Default: 30
+       #[arg( long, default_value_t = 30)]
        min_read: u32,
 
         /// Minimum unspliced read count for test  failure in at least one group must be >= min_fail. Discards junctions (p-value = NaN) .
-       /// Default: 0 | Recommended: 5-10
-       #[arg( long, default_value_t = 0)]
+       /// Default: 10
+       #[arg( long, default_value_t = 10)]
        min_fail: u32,
 
     },

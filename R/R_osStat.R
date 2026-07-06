@@ -116,7 +116,6 @@ outfile <- args[2]
 thread <- args[3]
 min_cover <- args[4]
 min_unspliced <- args[5]
-
 no_beta <- args[6]
 do_ambi <- args[7]
 

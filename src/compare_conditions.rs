@@ -234,15 +234,20 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
             let value = glm.get_proportion_string(); 
             //t.string_count.clone();
 
-            let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = glm.get_proportion();
+            //let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = glm.get_proportion();
+            //let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { (ctrl_suc / (ctrl_suc + ctrl_fail)).to_string()} else {"nan".to_string()};
+            let ctrl_suc = value.0.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold(0, |acc, x| acc + x);
+            let ctrl_fail = value.1.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold(0, |acc, x| acc + x);
             let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { (ctrl_suc / (ctrl_suc + ctrl_fail)).to_string()} else {"nan".to_string()};
+            
             f.push(value.0);
             f.push(value.1);
             f.push(ctrl_prop //  match t.control_prop {
                       //      Some(c) => c.to_string(),
                         //    None => "nan".to_string()}
             );
-
+            let treat_suc = value.2.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold(0, |acc, x| acc + x);
+            let treat_fail = value.3.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold( 0, |acc, x| acc + x);
             let treat_prop = if (treat_suc + treat_fail) > 0 { (treat_suc / (treat_suc + treat_fail)).to_string()} else {"nan".to_string()};
   
             f.push(value.2);
@@ -516,7 +521,7 @@ enum Commands {
     thread: usize,
 
     // deactivate glm_bb (usefull if time is an issue)
-    #[arg(long, action = clap::ArgAction::SetFalse)]
+    #[arg(long, action = clap::ArgAction::SetTrue)]
     no_beta: bool
 
 
@@ -550,7 +555,7 @@ enum Commands {
         thread: usize,
 
         // deactivate glm_bb (usefull if time is an issue)
-        #[arg(long, action = clap::ArgAction::SetFalse)]
+        #[arg(long, action = clap::ArgAction::SetTrue)]
         no_beta: bool
     },
 }
@@ -616,8 +621,8 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Commands::RunAll { control_files, 
             treatment_files, outfile_prefix, 
             min_read , min_fail, thread, no_beta} => {
-            info!("Running all single comparisons, output: {:?}", outfile_prefix);
-                
+            println!("Running all single comparisons, output: {:?}", outfile_prefix);
+            println!("no beta: {}", no_beta);
             assert!(thread > 0, "thread must be postive");
             rayon::ThreadPoolBuilder::new()
             .num_threads(thread)          // your cap

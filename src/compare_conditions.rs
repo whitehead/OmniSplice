@@ -143,7 +143,7 @@ fn parse_results_update_vec(vec_r: &Vec<(&JunctionStats, TestResults, TtestResul
         match (t.control_prop, t.treatment_prop){
             (Some(p_c), Some(p_t)) => {
                 f.push(get_cohensh(p_c, p_t).to_string());
-                f.push(get_cohensh(p_c, p_t).to_string());
+                f.push((p_t - p_c).to_string());
             }
             _ => {
                 f.push("nan".to_string());

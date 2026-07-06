@@ -9,10 +9,9 @@ pass_min_read <- function(d, min_cover, min_unspliced, do_ambi) {
   g2_succ <- sum(d$y[d$grp == "treatment"])
   g2_fail <- sum(d$fail[d$grp == "treatment"])
 
-  if (d$ambigious[1] == "true") && (do_ambi == "true"){
+  if ((d$ambigious[1] == "true") && (do_ambi == "true")) {
     return(FALSE)
   }
-  
   if ((g1_fail + g1_succ) < min_cover || (g2_fail + g2_succ) < min_cover) {
     return(FALSE)
   }

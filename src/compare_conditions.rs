@@ -52,7 +52,9 @@ fn run_R(in_file: &str, out_file: &str, thread: u32,
     let script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("R/R_osStat.R");
     
     let mut bowt_child = Command::new("Rscript")
-        .args([script_path.to_str().unwrap(), in_file, out_file, &thread.to_string(), &min_read.to_string(), &min_unsp.to_string()])
+        .args([script_path.to_str().unwrap(), in_file, out_file,
+          &thread.to_string(), &min_read.to_string(),
+          &min_unsp.to_string(), &no_beta.to_string(), &do_ambi.to_string()])
         .spawn()
         .expect("Rscript failed to start");
     let _result = bowt_child.wait().unwrap();

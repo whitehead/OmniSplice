@@ -64,15 +64,6 @@ run_betabin_row <- function(d) {
 }
 
 
-run_mw <- function(d) {
-  res <- tryCatch({
-    prop <- d$y / (d$y + d$fail)
-    ctrl_vals <- prop[d$grp == "control"]
-    trt_vals  <- prop[d$grp == "treatment"]
-    wilcox.test(ctrl_vals, trt_vals)$p.value
-  }, error = function(e) NaN)
-  data.frame(row_id = d$row_id[1], pval_mw = res)
-}
 
 
 run_ttest <- function(d) {
@@ -163,15 +154,15 @@ results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
 results_full <- merge(results_full, filter_flags, by = "row_id")
 
 results_full[, padj_bb := p.adjust(p_value_betabin, method = "BH")]  # NAs auto-excluded from adjustment
-#results_full[, padj_mw := p.adjust(pval_mw, method = "BH")]
 results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
 
 dt <- merge(dt, results_full, by = "row_id")
 dt <- dt[order(dt$padj_bb), ]
 
+setcolorder(dt, c(setdiff(names(dt), "gene_transcript_intron"), "gene_transcript_intron"))
 
 # write comments first (raw text, no quoting/escaping)
 writeLines(comment_lines, outfile)
 
 # then append the data table in tsv format
-fwrite(dt, outfile, sep = "\t", append = TRUE, col.names = TRUE, na = "NA")
+fwrite(dt, outfile, sep = "\t", append = TRUE, col.names = TRUE, na = "NA",quote = FALSE)

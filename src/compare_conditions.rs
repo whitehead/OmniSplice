@@ -26,6 +26,7 @@ use stat_common::common::{Tester, parse_js_file, Genotype, JunctionStats, Splici
 use stat_common::glm_logistic::{GLM};
 use stat_common::glm_beta_binomial::GLMBetaBinomiale;
 
+use std::process::{Command, Stdio};
 mod common;
 
 use common::error::OmniError;
@@ -44,6 +45,17 @@ use log::{debug, error, info, trace, warn};
 use rayon::prelude::*;
 use rayon::iter::Either;
 
+
+
+fn run_R(in_file: &str, out_file: &str, thread: u32){
+    let script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("R/R_osStat.R");
+    
+    let mut bowt_child = Command::new("Rscript")
+        .args([script_path.to_str().unwrap(), in_file, out_file, &thread.to_string()])
+        .spawn()
+        .expect("Rscript failed to start");
+    let _result = bowt_child.wait().unwrap();
+}
 
 //}
 // If this ahppend to be to expansive I could order the indice of qvalue and then retorder both list accordingly.
@@ -103,6 +115,7 @@ fn helper_6(value: Option<f64>) -> String{
         None => "nan".to_string()
     }
 }
+
 //["chr", "strand", "start", "end",
  //
  //   "control_success", "control_failures", "control_ratio",
@@ -110,6 +123,9 @@ fn helper_6(value: Option<f64>) -> String{
  //   "glmbb_p_value", "glmbb_q_value", "oddRatio", "glmbb_CI", "glmbb_status", 
  //   "ttest_stat", "ttest_pvalue", "ttest_q_value", 
  //   "gene_transcript_intron"];
+
+
+
 
 fn get_cohensh(pcontrol: f32, ptreat: f32) -> f32{
     2.0 * (ptreat.sqrt().asin() - pcontrol.sqrt().asin()) //f64.asin() 
@@ -190,12 +206,57 @@ fn parse_results_update_vec(vec_r: &Vec<(&JunctionStats, TestResults, TtestResul
 
 fn run_one_test(junction: &HashMap<String, JunctionStats>,
                 successes_cat: Vec<SplicingCategory>,
-                 failures_cat: Vec<SplicingCategory>, out_file_path: &str,
-                  ambi: bool, min_cover: u32, min_fail:u32) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
+                failures_cat: Vec<SplicingCategory>,
+                out_file_path: &str,
+                ambi: bool, min_cover: u32, min_fail:u32, thread:u32) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
 
     
     info!("Starting test!");
-    let (mut vec_ok, mut vec_err): (Vec<_>, Vec<_>) = junction
+    let vec_res = junction
+        .par_iter()
+        .map(|(k, j)| {
+            let mut glm = GLMBetaBinomiale::new(
+                &j.treat_count,
+                &j.control_count,
+                &successes_cat,
+                &failures_cat,
+                k.to_owned());
+            let mut f= vec![j.get_pos_string()];
+            let t = glm.test(false, min_cover, min_fail);
+
+            let value = t.string_count.clone();
+
+            f.push(value.0);
+            f.push(value.1);
+            f.push(   match t.control_prop {
+                            Some(c) => c.to_string(),
+                            None => "nan".to_string()}
+            );
+
+            f.push(value.2);
+            f.push(value.3);
+            f.push(  match t.treatment_prop {
+                Some(c) => c.to_string(),
+                None => "nan".to_string(),}
+            );
+
+            match (t.control_prop, t.treatment_prop){
+                (Some(p_c), Some(p_t)) => {
+                    f.push(get_cohensh(p_c, p_t).to_string());
+                    f.push((p_t - p_c).to_string());
+                }
+                _ => {
+                    f.push("nan".to_string());
+                    f.push("nan".to_string());
+                }
+            }
+            f.push(j.gene_tr.iter().map(|x| x.to_owned()).collect::<Vec<String>>().join(";"));
+        f.join("\t")
+    }).collect::<Vec<String>>();
+
+    
+    /*let (mut vec_ok, mut vec_err): (Vec<_>, Vec<_>) = junction
+
         .par_iter()
         .map(|(k, j)| {
             let mut glm = GLMBetaBinomiale::new(
@@ -347,6 +408,10 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
     parse_results_update_vec(&vec_ok, &mut final_);
     //parse_results_update_vec(&vec_err, &mut final_, None);
 
+*/
+    
+    //let mut out_file_path_temp = Path::new(&out_file_path).to_path_buf();
+   // let _ = out_file_path_temp.set_extension(".tmp");
 
     let mut out_file_open =
         File::create_new(out_file_path.clone()) //presorted out_file.clone()
@@ -360,16 +425,22 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
     let header = vec!["chr:start-end(strand)",
     "control_success", "control_failures", "control_ratio",
      "treatment_success", "treatment_failures", "treatment_ratio", "delta-psi", "Cohens-h",
-       "glmbb_p_value", "glmbb_q_value", "oddRatio", "glmbb_CI", "glmbb_status", 
-        "ttest_stat", "ttest_pvalue", "ttest_q_value", 
-           "gene_transcript_intron"];
+       "gene_transcript_intron"];//"glmbb_p_value", "glmbb_q_value", "oddRatio", "glmbb_CI", "glmbb_status", 
+        //"ttest_stat", "ttest_pvalue", "ttest_q_value", 
+        //   "gene_transcript_intron"];
 
     out_stream.write(format!("{}\n", header.join("\t")).as_bytes());
-    for e in final_{
-        out_stream.write(format!("{}\n", e.join("\t")).as_bytes())?;
+    for e in vec_res{
+        out_stream.write(format!("{}\n", e).as_bytes())?;
     }
 
     let _ = out_stream.flush();
+
+    //let mut out_file_path_temp = Path::new(&out_file_path).to_path_buf();
+
+    run_R(out_file_path, out_file_path, thread);
+    //let _ = fs::remove_file(out_file_path_temp);
+
     Ok(())
 }
 
@@ -513,7 +584,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         run_one_test( &res, control,
                  treatment,  outfile.to_str().unwrap(), 
-                  ambigious, min_read, min_fail)?;
+                  ambigious, min_read, min_fail, thread as u32)?;
 
         }
         Commands::RunAll { control_files, 
@@ -563,7 +634,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Unspliced.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                  vec![SplicingCategory::Unspliced],  p.to_str().unwrap(), 
-                  false, min_read, min_fail)?;
+                  false, min_read, min_fail, thread as u32)?;
 
 
 
@@ -574,7 +645,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("WrongStrand.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::WrongStrand],  p.to_str().unwrap(), 
-                  false, min_read, min_fail)?;
+                  false, min_read, min_fail, thread as u32)?;
 
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::WrongStrand],
     //   p.to_str().unwrap() , false, min_read, min_fail));
@@ -583,7 +654,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Skipped.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                  vec![SplicingCategory::Skipped],  p.to_str().unwrap(), 
-                  false, min_read, min_fail)?;
+                  false, min_read, min_fail, thread as u32)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Skipped],
     //   p.to_str().unwrap() , false, min_read, min_fail));
         info!( "starting SkippedUnrelated" );
@@ -591,7 +662,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("SkippedUnrelated.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::SkippedUnrelated],  p.to_str().unwrap(), 
-                  false, min_read, min_fail)?;
+                  false, min_read, min_fail, thread as u32)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::SkippedUnrelated],
     //   p.to_str().unwrap() , false, min_read, min_fail));
         info!( "starting Clipped" );
@@ -600,7 +671,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::Clipped],  p.to_str().unwrap(), 
-                  false, min_read, min_fail)?;
+                  false, min_read, min_fail, thread as u32)?;
    
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Clipped],
     //   p.to_str().unwrap() , false, min_read, min_fail));
@@ -610,7 +681,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::ExonOther],  p.to_str().unwrap(), 
-                  true, min_read, min_fail)?;
+                  true, min_read, min_fail, thread as u32)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::ExonOther],
     //   p.to_str().unwrap(), true, min_read, min_fail));
            info!( "starting E_isoform" );
@@ -618,7 +689,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Isoform.tsv");
             run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::EIsoform],  p.to_str().unwrap(), 
-                  false, min_read, min_fail)?;
+                  false, min_read, min_fail, thread as u32)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::EIsoform],
     //   p.to_str().unwrap() , false, min_read, min_fail));
 

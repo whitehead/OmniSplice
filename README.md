@@ -2,7 +2,7 @@ Welcome to the omnisplice read me.
 
 # patch note
 > 0.5
-> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice use a un house Rust Implementation, but I provide a R code to uses more established library. our benchmark show a correlation of p-value of 0.995 (Pearson). 
+> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice uses a R code that uses established library, so you need R and Rscript on your path. our benchmark show a correlation of p-value of 0.995 (Pearson). 
 
 > B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower.
 
@@ -76,6 +76,11 @@ python gene_visualisation.py --group1 control_S1.junctions control_S2.junctions 
 
 
 ## Installation
+
+you need R and Rscript on your path with those library available:
+>aod
+>data.table
+>parallel
 
 to use omni splice you need access to a linux machine (mac never tested).
 you need rust, to install rust go to (https://www.rust-lang.org/tools/install). 

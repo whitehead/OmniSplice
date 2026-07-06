@@ -56,7 +56,7 @@ backsplicing -i <omnisplice_out.clipped> -o <outputPrefix>> -b <bowtie2 ref> -g 
 # for comparison 
 compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --thread 10
 
-# specific splicing factor
+# specific splicing category
 compare_conditions run --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --splicing-fail  Unspliced Clipped Exon_other --splicing-ok Spliced --thread 10
 
 

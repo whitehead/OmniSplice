@@ -234,7 +234,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
             let value = glm.get_proportion_string(); 
             //t.string_count.clone();
 
-            let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = self.get_proportion();
+            let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = glm.get_proportion();
             let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { ctrl_suc / (ctrl_suc + ctrl_fail)} {"nan".to_string()};
             f.push(value.0);
             f.push(value.1);

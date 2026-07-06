@@ -2,9 +2,11 @@ Welcome to the omnisplice read me.
 
 # patch note
 > 0.5
-> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice use a un house Rust Implementation, but we provide a R code to uses more established library. our benchamark show a correlation of 0.995 (Pearson). 
+> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice use a un house Rust Implementation, but I provide a R code to uses more established library. our benchmark show a correlation of p-value of 0.995 (Pearson). 
+
 > B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower.
-> C - We change the output of COmpare Conditions adding CI cohensh psidelta, and the osition are now represented as chr:start-end(strand). 
+
+> C - I changed the output of "compare_conditions" adding CI cohensh psidelta, and the osition are now represented as chr:start-end(strand). 
 
 
 Omnisplice is a tool to categorize all reads present at exon's extremity.

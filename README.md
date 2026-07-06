@@ -54,10 +54,10 @@ omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --read-to
 backsplicing -i <omnisplice_out.clipped> -o <outputPrefix>> -b <bowtie2 ref> -g <gtf> -m <min clipped size, default 20> 
 
 # for comparison 
-compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file>
+compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --thread 10
 
-# specific splicinfg factor
-compare_conditions run --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --splicing-fail  Unspliced Clipped Exon_other --splicing-ok Spliced
+# specific splicing factor
+compare_conditions run --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --splicing-fail  Unspliced Clipped Exon_other --splicing-ok Spliced --thread 10
 
 
 # quick plot of genes (barplot as in manuscript)

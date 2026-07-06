@@ -3,11 +3,15 @@ library(data.table)
 library(parallel)
 
 
-pass_min_read <- function(d, min_cover, min_unspliced) {
+pass_min_read <- function(d, min_cover, min_unspliced, do_ambi) {
   g1_succ <- sum(d$y[d$grp == "control"])
   g1_fail <- sum(d$fail[d$grp == "control"])
   g2_succ <- sum(d$y[d$grp == "treatment"])
   g2_fail <- sum(d$fail[d$grp == "treatment"])
+
+  if (d$ambigious[1] == "true") && (do_ambi == "true"){
+    return(FALSE)
+  }
   
   if ((g1_fail + g1_succ) < min_cover || (g2_fail + g2_succ) < min_cover) {
     return(FALSE)
@@ -63,9 +67,6 @@ run_betabin_row <- function(d) {
   out
 }
 
-
-
-
 run_ttest <- function(d) {
   res <- tryCatch({
     prop <- d$y / (d$y + d$fail)
@@ -94,7 +95,8 @@ reader <- function(dt) {
       row_id = dt$row_id[i],
       y      = as.numeric(c(cs[[i]], ts[[i]])),
       fail   = as.numeric(c(cf[[i]], tf[[i]])),
-      grp    = c(rep("control", length(cs[[i]])), rep("treatment", length(ts[[i]])))
+      grp    = c(rep("control", length(cs[[i]])), rep("treatment", length(ts[[i]]))),
+      ambigious = dt$ambigious[i]
     )
   }))
 }
@@ -112,10 +114,12 @@ print(args)
 # Example: Access individual arguments
 myfile <- args[1]
 outfile <- args[2]
+thread <- args[3]
+min_cover <- args[4]
+min_unspliced <- args[5]
 
-min_cover     <- 30   # set to your actual thresholds
-min_unspliced <- 10
-
+no_beta <- args[6]
+do_ambi <- args[7]
 
 
 all_lines <- readLines(myfile)
@@ -131,24 +135,25 @@ split_list <- split(long_dt, long_dt$row_id)
 
 filter_flags <- rbindlist(lapply(split_list, function(d) {
   data.frame(row_id = d$row_id[1],
-             pass_filter = pass_min_read(d, min_cover, min_unspliced))
+             pass_filter = pass_min_read(d, min_cover, min_unspliced, do_ambi))
 }))
 
 pass_ids <- filter_flags[pass_filter == TRUE, row_id]
 split_pass <- split_list[as.character(pass_ids)]
 
 
-n_cores <- 5
-bb_results <- rbindlist(mclapply(split_pass, run_betabin_row, mc.cores = n_cores))
-#mw_results <- rbindlist(mclapply(split_pass, run_mw, mc.cores = n_cores))
-t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
-
-
-
-#results <- merge(bb_results, mw_results, by = "row_id")
-results <- merge(bb_results, t_results, by = "row_id")
+n_cores <- thread
 
 all_ids <- data.table(row_id = dt$row_id)
+
+
+if (no_beta == "false"){
+
+bb_results <- rbindlist(mclapply(split_pass, run_betabin_row, mc.cores = n_cores))
+t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
+
+results <- merge(bb_results, t_results, by = "row_id")
+
 
 results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
 results_full <- merge(results_full, filter_flags, by = "row_id")
@@ -159,6 +164,37 @@ results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
 dt <- merge(dt, results_full, by = "row_id")
 dt <- dt[order(dt$padj_bb), ]
 
+}
+else{
+
+t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
+
+all_ids <- data.table(row_id = dt$row_id)
+
+results_full <- merge(all_ids, t_results, by = "row_id", all.x = TRUE)
+results_full <- merge(results_full, filter_flags, by = "row_id")
+
+results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
+
+dt <- merge(dt, results_full, by = "row_id")
+dt <- dt[order(dt$padj_t), ]
+
+}
+
+#bb_results <- rbindlist(mclapply(split_pass, run_betabin_row, mc.cores = n_cores))
+#t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
+
+#results <- merge(bb_results, t_results, by = "row_id")
+
+#all_ids <- data.table(row_id = dt$row_id)
+
+#results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
+#results_full <- merge(results_full, filter_flags, by = "row_id")
+
+#results_full[, padj_bb := p.adjust(p_value_betabin, method = "BH")]  # NAs auto-excluded from adjustment
+#results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
+
+
 setcolorder(dt, c(setdiff(names(dt), "gene_transcript_intron"), "gene_transcript_intron"))
 
 # write comments first (raw text, no quoting/escaping)
@@ -166,3 +202,4 @@ writeLines(comment_lines, outfile)
 
 # then append the data table in tsv format
 fwrite(dt, outfile, sep = "\t", append = TRUE, col.names = TRUE, na = "NA",quote = FALSE)
+ 

@@ -1,6 +1,7 @@
+use clap::error;
 use thiserror::Error;
 
-
+use statrs::distribution::{StudentsTError};
 
 #[derive(Error, Debug, Clone)]
 pub enum LogisticRegressionError {
@@ -52,7 +53,14 @@ pub enum LogisticRegressionError {
     oddRatioError,
 
     #[error("fall back to Fisher")]
-    FailUseFisher
+    FailUseFisher,
+
+    #[error("t-test Error ")]
+    TtestStudents(#[from] StudentsTError),
+
+    #[error("t-test Error ")]
+    TtestError
+
 }
 
 

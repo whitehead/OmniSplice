@@ -18,8 +18,99 @@ use crate::common::utils::ReadAssign;
 
 use super::super::common::error::OmniError;
 use super::errors::LogisticRegressionError;
-use statrs::distribution::{Discrete, DiscreteCDF, Hypergeometric};
+use statrs::distribution::{Discrete, DiscreteCDF, Hypergeometric, StudentsT, ContinuousCDF};
 use statrs::statistics::{Min, Max};
+use adjustp::{adjust, Procedure};
+
+
+pub fn apply_bh_correction<T>(
+    items: &mut [T],
+    get_p: impl Fn(&T) -> Option<f64>,
+    set_q: impl Fn(&mut T, f64),
+) {
+    let mut refs: Vec<&mut T> = Vec::new();
+    let mut pvals: Vec<f64> = Vec::new();
+
+    for item in items.iter_mut() {
+        if let Some(p) = get_p(item) {
+            pvals.push(p);
+            refs.push(item);
+        }
+    }
+
+    if pvals.is_empty() {
+        return;
+    }
+
+    let qvals = adjust(&pvals, Procedure::BenjaminiHochberg);
+
+    for (r, q) in refs.into_iter().zip(qvals) {
+        set_q(r, q);
+    }
+}
+
+
+
+#[derive(Debug, Clone, Copy)]
+pub struct TtestResult{
+    pub t_stat: Option<f64>,
+    pub p_value: Option<f64>,
+    pub q_value: Option<f64>
+}
+
+impl TtestResult{
+    pub fn new_empty() -> Self{
+        Self{
+            t_stat: None,
+            p_value: None,
+            q_value: None,
+
+        }
+    }
+}
+pub fn welch_t_test(a: &[f64], b: &[f64]) -> Result<TtestResult, LogisticRegressionError> {
+
+    if a.len() < 2 || b.len() < 2 {
+        return Err(LogisticRegressionError::TtestError);
+    }
+    let mean_a = a.iter().sum::<f64>() / a.len() as f64;
+    let mean_b = b.iter().sum::<f64>() / b.len() as f64;
+    let var_a = a.iter().map(|x| (x - mean_a).powi(2)).sum::<f64>() / (a.len() as f64 - 1.0);
+    let var_b = b.iter().map(|x| (x - mean_b).powi(2)).sum::<f64>() / (b.len() as f64 - 1.0);
+
+    let se = (var_a / a.len() as f64 + var_b / b.len() as f64).sqrt();
+    let t_stat = (mean_a - mean_b) / se;
+
+    // Welch-Satterthwaite degrees of freedom
+    let df = (var_a / a.len() as f64 + var_b / b.len() as f64).powi(2)
+        / ((var_a / a.len() as f64).powi(2) / (a.len() as f64 - 1.0)
+            + (var_b / b.len() as f64).powi(2) / (b.len() as f64 - 1.0));
+
+    let t_dist = StudentsT::new(0.0, 1.0, df)?;
+    let p_value = 2.0 * (1.0 - t_dist.cdf(t_stat.abs()));
+
+    if !t_stat.is_finite() || !p_value.is_finite() {
+        return Err(LogisticRegressionError::TtestError);
+    }
+
+    Ok(TtestResult{t_stat: Some(t_stat), p_value: Some(p_value), q_value: None})
+}
+
+
+#[cfg(test)]
+mod tttest {
+    use super::*;
+
+    #[test]
+    fn my_two_group_test() {
+        let control_props = vec![0.010, 0.012, 0.011, 0.010, 0.017, 0.010]; // per-replicate proportions
+        let treatment_props = vec![0.57, 0.61, 0.56, 0.61, 0.55, 0.58];
+        let e = welch_t_test(&control_props, &treatment_props);
+        println!("{:?}", e);
+    }
+}
+
+
 
 
 /// use hyper geom test to compute 2 tailed p-value 
@@ -178,8 +269,11 @@ pub struct JunctionStats{
 }
 
 impl JunctionStats{
-    pub fn get_pos_string(&self) -> Vec<String>{
-        vec![self.contig.clone(), self.strand.clone(), self.start.clone(), self.end.clone()]
+    pub fn get_pos_string(&self) -> String{
+        format!("{}:{}-{}({})", self.contig.clone(),
+           self.start.clone(),
+           self.end.clone(),
+           self.strand.clone())
     }
 
    
@@ -459,6 +553,7 @@ pub enum TestStatus {
     SingularMatrix,
     PerfectSeparation,
     FisherFallBack,
+    TtestFallback,
     HyperGeom,
     FailFilter,
     CIUnavail,
@@ -493,6 +588,8 @@ impl fmt::Display for TestStatus {
             TestStatus::FailFilter => { write!(f, "Failfilter") }
             TestStatus::CIUnavail => { write!(f, "CIUnavailable") },
             TestStatus::OddRatioUnavail => { write!(f, "ORUnavailable") },
+            TestStatus::TtestFallback => { write!(f, "TtestFallback") },
+
         }
     }
 }
@@ -526,12 +623,15 @@ impl From<LogisticRegressionError> for TestStatus {
 
             LogisticRegressionError::CIUnavail(_) => TestStatus::CIUnavail,
             LogisticRegressionError::oddRatioError => TestStatus::OddRatioUnavail,
-            LogisticRegressionError::FailUseFisher => TestStatus::FisherFallBack
+            LogisticRegressionError::FailUseFisher => TestStatus::FisherFallBack,
+            LogisticRegressionError::TtestError => TestStatus::NumericalInstability,
+            LogisticRegressionError::TtestStudents(e) => TestStatus::NumericalInstability,
         }
         
     }
 }
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
 pub struct TestResults{
 
     pub control_success: u32,
@@ -545,6 +645,7 @@ pub struct TestResults{
     pub status: Option<TestStatus>,
     // Only available if model fit succeeded
     pub p_value: Option<f64>,
+    pub q_value: Option<f64>,
     pub odd_ratio: Option<f64>,
     pub or_ci_lower: Option<f64>,
     pub or_ci_upper: Option<f64>,
@@ -556,7 +657,7 @@ impl TestResults{
     pub fn get_empty() -> Self{
         TestResults { control_success: 0, control_failure: 0, control_prop: None,
                       treatment_success: 0, treatment_failure: 0, treatment_prop: None,
-                      status: None, p_value: None,
+                      status: None, p_value: None, q_value: None,
                       predicted_treatment_prop: None, predicted_control_prop: None,
                       odd_ratio: None, or_ci_lower: None,
                       or_ci_upper: None, string_count: ("".to_string(), "".to_string(), "".to_string(), "".to_string())}

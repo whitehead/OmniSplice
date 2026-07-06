@@ -1,6 +1,6 @@
 [package]
 name = "omni_splice"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2024"
 authors = ["Romain JSB Lannes", "rlannes@wi.mit.edu"]
 
@@ -10,15 +10,15 @@ rust-htslib = "1.0.0"
 CigarParser = { git = "https://github.com/rLannes/CigarParser" }
 clap = { version = "4.5.16", features = ["derive"] }
 strand_specifier = {version="0.2.1",  git = "https://github.com/rLannes/BAMstrandSpecifier" }
-regex = "*"
+regex = "1.12.4"
 lazy_static = "1.5.0"
-itertools = "*"
+itertools = "0.15.0"
 log = "0.4"
 flexi_logger = { version = "0.31", features = ["async", "specfile"] }
 thiserror = "2"
-nalgebra = "*"
+nalgebra = "0.35.0"
 statrs = "0.18.0"
-adjustp = "*"
+adjustp = "0.1.6"
 rayon = "1.10"
 fishers_exact ="*"
 paste = '1.0.15'

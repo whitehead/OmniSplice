@@ -218,13 +218,17 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
     info!("Starting test!");
     let vec_res = junction
         .par_iter()
-        .map(|(k, j)| {
+        .filter_map(|(k, j)| {
             let mut glm = GLMBetaBinomiale::new(
                 &j.treat_count,
                 &j.control_count,
                 &successes_cat,
                 &failures_cat,
                 k.to_owned());
+
+            if !glm.pass_min_read(min_cover, min_fail){return  None}
+            if j.ambiguous == true && ambi == true {return None}
+
             let mut f= vec![j.get_pos_string()];
             f.push(if j.ambiguous {"true".to_string()} else {"false".to_string()});
 
@@ -268,7 +272,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
                 }
             }
             f.push(j.gene_tr.iter().map(|x| x.to_owned()).collect::<Vec<String>>().join(";"));
-        f.join("\t")
+        Some(f.join("\t"))
     }).collect::<Vec<String>>();
 
     

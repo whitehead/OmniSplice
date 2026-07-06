@@ -230,8 +230,9 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
 
             let t = glm.test(false, min_cover, min_fail);
 
-
-            let value = t.string_count.clone();
+            //get_proportion_string
+            let value = glm.get_proportion_string(); 
+            //t.string_count.clone();
 
             f.push(value.0);
             f.push(value.1);

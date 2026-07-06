@@ -163,8 +163,7 @@ results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
 dt <- merge(dt, results_full, by = "row_id")
 dt <- dt[order(dt$padj_bb), ]
 
-}
-else{
+} else {
 
 t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
 
@@ -195,7 +194,7 @@ dt <- dt[order(dt$padj_t), ]
 
 
 setcolorder(dt, c(setdiff(names(dt), "gene_transcript_intron"), "gene_transcript_intron"))
-
+dt[, row_id := NULL]
 # write comments first (raw text, no quoting/escaping)
 writeLines(comment_lines, outfile)
 

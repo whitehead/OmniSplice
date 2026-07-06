@@ -74,8 +74,8 @@ impl Tester for GLMBetaBinomiale {
     fn groups(&self) -> &Vec<Genotype> { &self.groups }
     fn groups_mut(&mut self) -> &mut Vec<Genotype> { &mut self.groups }
 
-    // Identical shell to GLM::test() -- empty/null/min-read branching, packaging
-    // into TestResults -- just delegates to this struct's actual_test().
+
+
     fn test(&self, donotrun: bool, min_coverage: u32, min_failure: u32) -> TestResults {
         let mut test_res = TestResults::get_empty();
         let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = self.get_proportion();

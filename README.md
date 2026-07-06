@@ -4,9 +4,9 @@ Welcome to the omnisplice read me.
 > 0.5
 > A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice uses a R code that uses established library, so you need R and Rscript on your path. 
 
-> B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower.
+> B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower. you can also turn of the beta-binomial test using --no-beta.
 
-> C - I changed the output of "compare_conditions" adding CI cohensh psidelta, and the osition are now represented as chr:start-end(strand). 
+> C - I changed the output of "compare_conditions" adding CI, cohensh, psidelta, and the position are now represented as chr:start-end(strand). 
 
 
 Omnisplice is a tool to categorize all reads present at exon's extremity.
@@ -40,7 +40,7 @@ you first need to run OmniSplice for all your sorted index bam file:
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --anchor 3
 
 then run compares conditions
-compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --thread 10
+compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file>  --min-read  30 --min-fail 10 --thread 15
 
 
 
@@ -63,10 +63,10 @@ omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --read-to
 backsplicing -i <omnisplice_out.clipped> -o <outputPrefix>> -b <bowtie2 ref> -g <gtf> -m <min clipped size, default 20> 
 
 # for comparison 
-compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --thread 10
+compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> ---min-read  30 --min-fail 10 --thread 15
 
 # specific splicing category
-compare_conditions run --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --splicing-fail  Unspliced Clipped Exon_other --splicing-ok Spliced --thread 10
+compare_conditions run --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --splicing-fail  Unspliced Clipped Exon_other --splicing-ok Spliced --min-read  30 --min-fail 10 --thread 15
 
 
 # quick plot of genes (barplot as in manuscript)

@@ -238,8 +238,8 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
             //let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { (ctrl_suc / (ctrl_suc + ctrl_fail)).to_string()} else {"nan".to_string()};
             let ctrl_suc = value.0.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold(0, |acc, x| acc + x);
             let ctrl_fail = value.1.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold(0, |acc, x| acc + x);
-            let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { (ctrl_suc / (ctrl_suc + ctrl_fail)).to_string()} else {"nan".to_string()};
-            
+            let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { (ctrl_suc as f32 / (ctrl_suc as f32  + ctrl_fail as f32 )).to_string()} else {"nan".to_string()};
+            //println!("{:?} {} {} {}", value, ctrl_suc, ctrl_fail, ctrl_prop);
             f.push(value.0);
             f.push(value.1);
             f.push(ctrl_prop //  match t.control_prop {
@@ -248,7 +248,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
             );
             let treat_suc = value.2.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold(0, |acc, x| acc + x);
             let treat_fail = value.3.split(",").map(|x| x.parse::<u32>().unwrap_or(0)).fold( 0, |acc, x| acc + x);
-            let treat_prop = if (treat_suc + treat_fail) > 0 { (treat_suc / (treat_suc + treat_fail)).to_string()} else {"nan".to_string()};
+            let treat_prop = if (treat_suc + treat_fail) > 0 { (treat_suc as f32  / (treat_suc as f32  + treat_fail as f32 )).to_string()} else {"nan".to_string()};
   
             f.push(value.2);
             f.push(value.3);

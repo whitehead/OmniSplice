@@ -33,8 +33,17 @@ even it is the same position (different transcript same gene).
 ## Quick uses
 ```
 
-you first need to run OmniSplice:
+the standard pipe-line that I uses:
+
+
+you first need to run OmniSplice for all your sorted index bam file:
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --anchor 3
+
+then run compares conditions
+compare_conditions run-all --control-files control1.junction control2.junction --treatment-files treatment1.junction treatment2.junction  --min-read 10  --outfile-prefix <out file> --thread 10
+
+
+
 
 # specify the lib type for unstranded data
 omni_splice --gtf <gtf file> --input <indexBamFile> -o <outFilePrefix> --Libtype Unstranded

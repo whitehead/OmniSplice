@@ -2,7 +2,7 @@ Welcome to the omnisplice read me.
 
 # patch note
 > 0.5
-> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice uses a R code that uses established library, so you need R and Rscript on your path. our benchmark show a correlation of p-value of 0.995 (Pearson). 
+> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice uses a R code that uses established library, so you need R and Rscript on your path. 
 
 > B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower.
 

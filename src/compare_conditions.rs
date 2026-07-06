@@ -234,18 +234,22 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
             let value = glm.get_proportion_string(); 
             //t.string_count.clone();
 
+            let (ctrl_suc, ctrl_fail, treat_suc, treat_fail) = self.get_proportion();
+            let ctrl_prop = if (ctrl_suc + ctrl_fail) > 0 { ctrl_suc / (ctrl_suc + ctrl_fail)} {"nan".to_string()};
             f.push(value.0);
             f.push(value.1);
-            f.push(   match t.control_prop {
-                            Some(c) => c.to_string(),
-                            None => "nan".to_string()}
+            f.push(ctrl_prop //  match t.control_prop {
+                      //      Some(c) => c.to_string(),
+                        //    None => "nan".to_string()}
             );
 
+            let treat_prop = if (treat_suc + treat_fail) > 0 { treat_suc / (treat_suc + treat_fail)} {"nan".to_string()};
+  
             f.push(value.2);
             f.push(value.3);
-            f.push(  match t.treatment_prop {
-                Some(c) => c.to_string(),
-                None => "nan".to_string(),}
+            f.push( treat_prop// match t.treatment_prop {
+               // Some(c) => c.to_string(),
+               // None => "nan".to_string(),}
             );
 
             match (t.control_prop, t.treatment_prop){

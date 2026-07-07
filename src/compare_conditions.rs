@@ -326,7 +326,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
 
     out_stream.write(format!("#success: {}\n", successes_cat_ref.iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ")).to_string().as_bytes());
     out_stream.write(format!("#failures: {}\n", failures_cat_ref.iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ")).to_string().as_bytes());
-    out_stream.write(format!("#min_read: {}; min_fail {}; ambigious: {}\n", min_cover, min_fail, ambi).to_string().as_bytes());
+    out_stream.write(format!("#min_read: {}; min_fail {}; ambigious: {}, test: {}\n", min_cover, min_fail, ambi, if low_rep == true{"logistic/Fischer"}else{"beta-binomial/t-test"}).as_bytes());
     let header = vec!["chr:start-end(strand)", "ambigious",
     "control_success", "control_failures", "control_ratio",
      "treatment_success", "treatment_failures", "treatment_ratio", "delta-psi", "Cohens-h",

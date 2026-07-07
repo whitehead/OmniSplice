@@ -6,7 +6,7 @@ Welcome to the omnisplice read me.
 
 > B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower. 
 
-> WARNING! if you few replicate < 6 it is advised to do different test (Fischer extact test, logistic glm) to trigger this use: "--low-repl" option. This tend to artificilly give low p-value when their is a lot of variance between samples. But variance aware test (t test of beta binomila model) required more samples.
+> WARNING! if you have few replicates. It is advised to do different test (Fischer extact test, logistic glm) to trigger this use: "--low-repl" option. Those test tend to artificially give low p-value when there is a lot of variance between samples. But variance aware test (t test of beta binomila model) required more samples to be effective.
 
 > C - I changed the output of "compare_conditions" adding CI, cohensh, psidelta, and the position are now represented as chr:start-end(strand). 
 

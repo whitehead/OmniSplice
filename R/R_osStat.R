@@ -3,24 +3,6 @@ library(data.table)
 library(parallel)
 
 
-pass_min_read <- function(d, min_cover, min_unspliced, do_ambi) {
-  g1_succ <- sum(d$y[d$grp == "control"])
-  g1_fail <- sum(d$fail[d$grp == "control"])
-  g2_succ <- sum(d$y[d$grp == "treatment"])
-  g2_fail <- sum(d$fail[d$grp == "treatment"])
-
-  if ((d$ambigious[1] == "true") && (do_ambi == "true")) {
-    return(FALSE)
-  }
-  if ((g1_fail + g1_succ) < min_cover || (g2_fail + g2_succ) < min_cover) {
-    return(FALSE)
-  }
-  if (g1_fail < min_unspliced && g2_fail < min_unspliced) {
-    return(FALSE)
-  }
-  TRUE
-}
-
 test_junction_betabin <- function(success, failure, group,
                                   group_levels = c("control", "treatment")) {
   res <- tryCatch({
@@ -196,16 +178,7 @@ dt <- fread(myfile)
 dt[, row_id := .I]  
 
 long_dt = reader(dt)
-split_list <- split(long_dt, long_dt$row_id)
-
-filter_flags <- rbindlist(lapply(split_list, function(d) {
-  data.frame(row_id = d$row_id[1],
-             pass_filter = pass_min_read(d, min_cover, min_unspliced, do_ambi))
-}))
-
-pass_ids <- filter_flags[pass_filter == TRUE, row_id]
-split_pass <- split_list[as.character(pass_ids)]
-
+split_pass <- split(long_dt, long_dt$row_id)
 
 n_cores <- thread
 all_ids <- data.table(row_id = dt$row_id)
@@ -218,7 +191,6 @@ if (low_repl == "true") {
   results <- merge(fisher_results, logit_results, by = "row_id")
 
   results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
-  results_full <- merge(results_full, filter_flags, by = "row_id")
 
   results_full[, padj_fisher := p.adjust(p_value_fisher, method = "BH")]  # NAs auto-excluded from adjustment
   results_full[, padj_logit  := p.adjust(p_value_logit,  method = "BH")]
@@ -234,7 +206,6 @@ if (low_repl == "true") {
   results <- merge(bb_results, t_results, by = "row_id")
 
   results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
-  results_full <- merge(results_full, filter_flags, by = "row_id")
 
   results_full[, padj_betabin := p.adjust(p_value_betabin, method = "BH")]  # NAs auto-excluded from adjustment
   results_full[, padj_ttest   := p.adjust(p_value_ttest,   method = "BH")]

@@ -414,10 +414,10 @@ enum Commands {
     #[arg( long, default_value_t = 5)]
     thread: usize,
 
-    /// when low replicate number < 6 it is often better to use glm logit / fischer test
-    /// toggle this flag to use those teast instead of the default beta binomial t-test. 
-    #[arg(long, action = clap::ArgAction::SetTrue)]
-    low_repl: bool
+    /// by default OmniSplice uses glm logit / fischer test.
+    /// toggle this flag to use a beta binomial and t-test instead. 
+    #[arg(long, action = clap::ArgAction::SetFalse)]
+    beta_bin: bool
 
 
     },
@@ -435,14 +435,15 @@ enum Commands {
         #[arg(short, long, num_args = 1.., required = true)]
         treatment_files: Vec<PathBuf>,
 
-       /// Minimum read count for test succes + failure in each group must be >= min_read. Discards junctions (p-value = NaN) .
+        /// The data is organize as the count for 4 categories: control succ, control fail, treat succ, treat fail
+       /// if  control succ < min_read OR treat succ < min_read  -> fail the the test
        /// Default: 30
        #[arg( long, default_value_t = 30)]
        min_read: u32,
 
-        /// we have 4 count categor control succ, control fail, treat succ, treat fail
-        ///  if  control succ < min_fail and control fail < min_fail  -> fail the the test
-        /// if  treat succ < min_fail and treat fail < min_fail  -> fail the the test
+       /// The data is organize as the count for 4 categories: control succ, control fail, treat succ, treat fail
+       /// if  control succ < min_fail AND control fail < min_fail  -> fail the the test
+       /// if  treat succ < min_fail AND treat fail < min_fail  -> fail the the test
        /// Default: 10
        #[arg( long, default_value_t = 10)]
        min_fail: u32,
@@ -451,10 +452,10 @@ enum Commands {
         #[arg( long, default_value_t = 5)]
         thread: usize,
 
-    /// when low replicate number < 6 it is often better to use glm logit / fischer test
-    /// toggle this flag to use those teast instead of the default beta binomial t-test. 
-    #[arg(long, action = clap::ArgAction::SetTrue)]
-    low_repl: bool
+    /// by default OmniSplice uses glm logit / fischer test.
+    /// toggle this flag to use a beta binomial and t-test instead. 
+    #[arg(long, action = clap::ArgAction::SetFalse)]
+    beta_bin: bool
     },
 }
 
@@ -482,7 +483,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Commands::Run { outfile, control_files,
                         treatment_files, splicing_ok,
                         splicing_fail, ambigious, min_read , min_fail, 
-                    thread, low_repl} => {
+                    thread, beta_bin} => {
         
             info!("Running comparison, output: {:?}", outfile);
 
@@ -513,14 +514,14 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         run_one_test( &res, control,
                  treatment,  outfile.to_str().unwrap(), 
                   ambigious, min_read,
-                   min_fail, thread as u32, low_repl)?;
+                   min_fail, thread as u32, beta_bin)?;
 
         }
         Commands::RunAll { control_files, 
             treatment_files, outfile_prefix, 
-            min_read , min_fail, thread, low_repl} => {
+            min_read , min_fail, thread, beta_bin} => {
             println!("Running all single comparisons, output: {:?}", outfile_prefix);
-            println!("using logistic model and Fissher test: {}", low_repl);
+            println!("using logistic model and Fisher test: {}", !beta_bin);
             assert!(thread > 0, "thread must be postive");
 
             rayon::ThreadPoolBuilder::new()
@@ -560,7 +561,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Unspliced.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                  vec![SplicingCategory::Unspliced],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, low_repl)?;
+                  false, min_read, min_fail, thread as u32, beta_bin)?;
 
 
 
@@ -571,7 +572,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("WrongStrand.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::WrongStrand],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, low_repl)?;
+                  false, min_read, min_fail, thread as u32, beta_bin)?;
 
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::WrongStrand],
     //   p.to_str().unwrap() , false, min_read, min_fail));
@@ -580,7 +581,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Skipped.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                  vec![SplicingCategory::Skipped],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, low_repl)?;
+                  false, min_read, min_fail, thread as u32, beta_bin)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Skipped],
     //   p.to_str().unwrap() , false, min_read, min_fail));
         info!( "starting SkippedUnrelated" );
@@ -588,7 +589,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("SkippedUnrelated.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::SkippedUnrelated],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, low_repl)?;
+                  false, min_read, min_fail, thread as u32, beta_bin)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::SkippedUnrelated],
     //   p.to_str().unwrap() , false, min_read, min_fail));
         info!( "starting Clipped" );
@@ -597,7 +598,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::Clipped],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, low_repl)?;
+                  false, min_read, min_fail, thread as u32, beta_bin)?;
    
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Clipped],
     //   p.to_str().unwrap() , false, min_read, min_fail));
@@ -607,7 +608,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::ExonOther],  p.to_str().unwrap(), 
-                  true, min_read, min_fail, thread as u32, low_repl)?;
+                  true, min_read, min_fail, thread as u32, beta_bin)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::ExonOther],
     //   p.to_str().unwrap(), true, min_read, min_fail));
            info!( "starting E_isoform" );
@@ -615,7 +616,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Isoform.tsv");
             run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::EIsoform],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, low_repl)?;
+                  false, min_read, min_fail, thread as u32, beta_bin)?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::EIsoform],
     //   p.to_str().unwrap() , false, min_read, min_fail));
 

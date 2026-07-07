@@ -685,7 +685,7 @@ impl TestResults{
     pub fn dump_stats(&self, q_val: Option<f64>) -> Vec<String>{
 
         //format!("{}\t{}\t{}\t{}", 
-         vec![           Self::helper_6(self.odd_ratio),
+         vec![       Self::helper_6(self.odd_ratio),
                     Self::helper_6(self.p_value),
                     Self::helper_6(q_val),
                     Self::helper_t(&self.status)]

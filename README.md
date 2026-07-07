@@ -4,7 +4,9 @@ Welcome to the omnisplice read me.
 > 0.5
 > A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice uses a R code that uses established library, so you need R and Rscript on your path. 
 
-> B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower. you can also turn of the beta-binomial test using --no-beta.
+> B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower. 
+
+> WARNING! if you few replicate < 6 it is advised to do different test (Fischer extact test, logistic glm) to trigger this use: "--low-repl" option. This tend to artificilly give low p-value when their is a lot of variance between samples. But variance aware test (t test of beta binomila model) required more samples.
 
 > C - I changed the output of "compare_conditions" adding CI, cohensh, psidelta, and the position are now represented as chr:start-end(strand). 
 

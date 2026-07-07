@@ -74,7 +74,74 @@ run_ttest <- function(d) {
     tt <- t.test(ctrl_vals, trt_vals)   # Welch's by default (var.equal = FALSE)
     tt$p.value
   }, error = function(e) NaN)
-  data.frame(row_id = d$row_id[1], pval_t = res)
+  data.frame(row_id = d$row_id[1], p_value_ttest = res)
+}
+
+test_junction_fisher <- function(success, failure, group,
+                                 group_levels = c("control", "treatment")) {
+  res <- tryCatch({
+    group <- factor(group, levels = group_levels)
+
+    g1_succ <- sum(success[group == group_levels[1]])
+    g1_fail <- sum(failure[group == group_levels[1]])
+    g2_succ <- sum(success[group == group_levels[2]])
+    g2_fail <- sum(failure[group == group_levels[2]])
+
+    tab <- matrix(c(g1_succ, g1_fail, g2_succ, g2_fail), nrow = 2, byrow = TRUE)
+    ft <- fisher.test(tab)
+
+    list(p_value = ft$p.value, odds_ratio = unname(ft$estimate),
+         ci_lower = ft$conf.int[1], ci_upper = ft$conf.int[2])
+  }, error = function(e) {
+    list(p_value = NaN, odds_ratio = NaN, ci_lower = NaN, ci_upper = NaN)
+  })
+
+  data.frame(p_value_fisher = res$p_value, odds_ratio_fisher = res$odds_ratio,
+             ci_lower_fisher = res$ci_lower, ci_upper_fisher = res$ci_upper)
+}
+
+run_fisher_row <- function(d) {
+  out <- test_junction_fisher(d$y, d$fail, d$grp,
+                              group_levels = c("control", "treatment"))
+  out$row_id <- d$row_id[1]
+  out
+}
+
+test_junction_logit <- function(success, failure, group,
+                                group_levels = c("control", "treatment")) {
+  res <- tryCatch({
+    group <- factor(group, levels = group_levels)
+    df <- data.frame(success = success, failure = failure, group = group)
+
+    null_fit <- glm(cbind(success, failure) ~ 1, data = df, family = binomial)
+    full_fit <- glm(cbind(success, failure) ~ group, data = df, family = binomial)
+
+    lr_stat <- deviance(null_fit) - deviance(full_fit)
+    p_value <- pchisq(lr_stat, df = 1, lower.tail = FALSE)
+
+    coefs <- summary(full_fit)$coefficients
+    beta_group <- coefs[2, "Estimate"]
+    se_group   <- coefs[2, "Std. Error"]
+
+    odds_ratio <- exp(beta_group)
+    ci_lower   <- exp(beta_group - 1.96 * se_group)
+    ci_upper   <- exp(beta_group + 1.96 * se_group)
+
+    list(p_value = p_value, odds_ratio = odds_ratio,
+         ci_lower = ci_lower, ci_upper = ci_upper)
+  }, error = function(e) {
+    list(p_value = NaN, odds_ratio = NaN, ci_lower = NaN, ci_upper = NaN)
+  })
+
+  data.frame(p_value_logit = res$p_value, odds_ratio_logit = res$odds_ratio,
+             ci_lower_logit = res$ci_lower, ci_upper_logit = res$ci_upper)
+}
+
+run_logit_row <- function(d) {
+  out <- test_junction_logit(d$y, d$fail, d$grp,
+                             group_levels = c("control", "treatment"))
+  out$row_id <- d$row_id[1]
+  out
 }
 
 
@@ -116,7 +183,7 @@ outfile <- args[2]
 thread <- args[3]
 min_cover <- args[4]
 min_unspliced <- args[5]
-no_beta <- args[6]
+low_repl <- args[6]
 do_ambi <- args[7]
 
 
@@ -141,58 +208,46 @@ split_pass <- split_list[as.character(pass_ids)]
 
 
 n_cores <- thread
-
 all_ids <- data.table(row_id = dt$row_id)
 
+if (low_repl == "true") {
 
-if (no_beta == "false"){
+  fisher_results <- rbindlist(mclapply(split_pass, run_fisher_row, mc.cores = n_cores))
+  logit_results  <- rbindlist(mclapply(split_pass, run_logit_row,  mc.cores = n_cores))
 
-bb_results <- rbindlist(mclapply(split_pass, run_betabin_row, mc.cores = n_cores))
-t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
+  results <- merge(fisher_results, logit_results, by = "row_id")
 
-results <- merge(bb_results, t_results, by = "row_id")
+  results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
+  results_full <- merge(results_full, filter_flags, by = "row_id")
 
+  results_full[, padj_fisher := p.adjust(p_value_fisher, method = "BH")]  # NAs auto-excluded from adjustment
+  results_full[, padj_logit  := p.adjust(p_value_logit,  method = "BH")]
 
-results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
-results_full <- merge(results_full, filter_flags, by = "row_id")
-
-results_full[, padj_bb := p.adjust(p_value_betabin, method = "BH")]  # NAs auto-excluded from adjustment
-results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
-
-dt <- merge(dt, results_full, by = "row_id")
-dt <- dt[order(dt$padj_bb), ]
+  dt <- merge(dt, results_full, by = "row_id")
+  dt <- dt[order(dt$padj_fisher), ]
 
 } else {
 
-t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
+  bb_results <- rbindlist(mclapply(split_pass, run_betabin_row, mc.cores = n_cores))
+  t_results  <- rbindlist(mclapply(split_pass, run_ttest,       mc.cores = n_cores))
 
-all_ids <- data.table(row_id = dt$row_id)
+  results <- merge(bb_results, t_results, by = "row_id")
 
-results_full <- merge(all_ids, t_results, by = "row_id", all.x = TRUE)
-results_full <- merge(results_full, filter_flags, by = "row_id")
+  results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
+  results_full <- merge(results_full, filter_flags, by = "row_id")
 
-results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
+  results_full[, padj_betabin := p.adjust(p_value_betabin, method = "BH")]  # NAs auto-excluded from adjustment
+  results_full[, padj_ttest   := p.adjust(p_value_ttest,   method = "BH")]
 
-dt <- merge(dt, results_full, by = "row_id")
-dt <- dt[order(dt$padj_t), ]
+  dt <- merge(dt, results_full, by = "row_id")
+  dt <- dt[order(dt$padj_betabin), ]
 
 }
 
-#bb_results <- rbindlist(mclapply(split_pass, run_betabin_row, mc.cores = n_cores))
-#t_results <- rbindlist(mclapply(split_pass, run_ttest, mc.cores = n_cores))
-
-#results <- merge(bb_results, t_results, by = "row_id")
-
-#all_ids <- data.table(row_id = dt$row_id)
-
-#results_full <- merge(all_ids, results, by = "row_id", all.x = TRUE)
-#results_full <- merge(results_full, filter_flags, by = "row_id")
-
-#results_full[, padj_bb := p.adjust(p_value_betabin, method = "BH")]  # NAs auto-excluded from adjustment
-#results_full[, padj_t  := p.adjust(pval_t,  method = "BH")]
-
-
-setcolorder(dt, c(setdiff(names(dt), "gene_transcript_intron"), "gene_transcript_intron"))
+# keep all p-value-adjusted columns grouped at the end, gene_transcript_intron last of all
+padj_cols  <- grep("^padj_", names(dt), value = TRUE)
+other_cols <- setdiff(names(dt), c(padj_cols, "gene_transcript_intron"))
+setcolorder(dt, c(other_cols, padj_cols, "gene_transcript_intron"))
 dt[, row_id := NULL]
 # write comments first (raw text, no quoting/escaping)
 writeLines(comment_lines, outfile)

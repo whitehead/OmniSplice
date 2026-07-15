@@ -21,12 +21,17 @@ use crate::common::point::{Point, PointContainer, get_attr_id};
 use crate::common::utils::{ExonType, ReadAssign, read_toassign};
 use itertools::Itertools;
 use lazy_static::lazy_static;
+
+use flexi_logger::{FileSpec, Logger, WriteMode};
 use log::{debug, error, info, trace, warn};
+
 use std::cmp::Reverse;
 use std::fmt::{self, format};
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
 use strand_specifier_lib::{LibType, check_flag};
+
+
 
 fn aln_bw(fa: &str, reference: &str, out_bam: &str) {
     let bowt_child = Command::new("bowtie2")
@@ -626,11 +631,15 @@ fn main() {
             Regex::new(r"AS:i:(-?\d+)").expect("Failed to compile AS:i regexp");
     }
 
+
+    Logger::try_with_str("info").unwrap().start().unwrap();
+    info!("extracting clipped part to fasta file");
     let map_read = clipped_to_fasta(
         &clipped_file,
         clipped_fasta.as_path().to_str().unwrap(),
         clipped_size_min,
     );
+    info!("aligning to genome");
     aln_bw(
         clipped_fasta.as_path().to_str().unwrap(),
         &bw2_ref,
@@ -639,23 +648,27 @@ fn main() {
 
     let mut to_ignore: HashSet<String> = HashSet::new();
     if best_only {
+        info!("ignoring multimapper");
         to_ignore = get_ambiguous_multimapper(&bw_bam, &reg_AS);
     }
-    println!("best-map-only option => ignoring: {:?}", to_ignore);
+    info!("best-map-only option => ignoring: {:?} reads", to_ignore.len());
+    info!("reading GTF");
 
     let mut point_cont = get_gtf_clipped(&gtf).expect("Failed to parse GTF"); // transcript is -> point container not optimal but I reuse what exist!
     let file = File::create_new(&output_file).expect(&format!(
         "output clipped fasta file should not exist.: {:?}",
         output_file.clone()
     ));
-    let mut f_out = BufWriter::new(file);
 
+    let mut f_out = BufWriter::new(file);
+    info!("parsing bam");
     let result = parse_bam(
         bw_bam.as_path().to_str().unwrap(),
         point_cont,
         &map_read,
         to_ignore,
     );
+    info!("wrttting results GTF");
     for (key, val) in result
         .iter()
         .sorted_by_key(|x| (Reverse(x.1.get_support()), x.1._id()))

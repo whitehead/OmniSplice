@@ -252,7 +252,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
                 failures_cat: Vec<SplicingCategory>,
                 out_file_path: &str,
                 ambi: bool, min_cover: u32, min_fail:u32,
-                thread:u32, low_rep: bool) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
+                thread:u32, low_rep: bool, control: Vec<String>, treatment: Vec<String>) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
      let successes_cat_ref = Arc::new(successes_cat);
      let failures_cat_ref = Arc::new(failures_cat);
     
@@ -324,15 +324,15 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
     let mut out_stream = BufWriter::new(out_file_open);
 
 
-    out_stream.write(format!("#success: {}\n", successes_cat_ref.iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ")).to_string().as_bytes());
-    out_stream.write(format!("#failures: {}\n", failures_cat_ref.iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ")).to_string().as_bytes());
+    out_stream.write(format!("#CONTROL_FILE: {}; TREATMENT_FILE: {}\n", control.join(","), treatment.join(",")).as_bytes());
+    out_stream.write(format!("#success: {} ; failures: {}\n",
+        successes_cat_ref.iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" "),
+        failures_cat_ref.iter().map(|x| format!("{}", x).to_string()).collect::<Vec<String>>().join(" ").to_string()).as_bytes());
     out_stream.write(format!("#min_read: {}; min_fail {}; ambigious: {}, test: {}\n", min_cover, min_fail, ambi, if low_rep == true{"logistic/Fischer"}else{"beta-binomial/t-test"}).as_bytes());
     let header = vec!["chr:start-end(strand)", "ambigious",
     "control_success", "control_failures", "control_ratio",
-     "treatment_success", "treatment_failures", "treatment_ratio", "delta-psi", "Cohens-h",
-       "gene_transcript_intron"];//"glmbb_p_value", "glmbb_q_value", "oddRatio", "glmbb_CI", "glmbb_status", 
-        //"ttest_stat", "ttest_pvalue", "ttest_q_value", 
-        //   "gene_transcript_intron"];
+     "treatment_success", "treatment_failures", "treatment_ratio",  "Cohens-h", "delta-psi",
+       "gene_transcript_intron"];
 
     out_stream.write(format!("{}\n", header.join("\t")).as_bytes());
     for e in vec_res{
@@ -498,13 +498,13 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     
             let mut res:  HashMap<String, JunctionStats> = HashMap::with_capacity(1_000_000);
 
-            for file in control_files{
+            for file in &control_files{
                     info!("parsing {:?}", file);
                     parse_js_file(file.to_str().unwrap(), &mut res, Genotype::CONTROL).unwrap();
                     info!("done reading");
                 }
 
-            for file in treatment_files{
+            for file in &treatment_files{
                     info!("parsing {:?}", file);
                     parse_js_file(file.to_str().unwrap(), &mut res, Genotype::TREATMENT).unwrap();
                     info!("done reading");
@@ -514,7 +514,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         run_one_test( &res, control,
                  treatment,  outfile.to_str().unwrap(), 
                   ambigious, min_read,
-                   min_fail, thread as u32, beta_bin)?;
+                   min_fail, thread as u32, beta_bin,
+                    control_files.into_iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.into_iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
 
         }
         Commands::RunAll { control_files, 
@@ -533,13 +535,13 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         let now = Instant::now();
 
-            for file in control_files.clone(){
+            for file in &control_files.clone(){
                     info!("parsing {:?}", file);
                     parse_js_file(file.to_str().unwrap(), &mut res, Genotype::CONTROL).unwrap();
                     info!("done reading");
                 }
 
-            for file in treatment_files.clone(){
+            for file in &treatment_files.clone(){
                     info!("parsing {:?}", file);
                     parse_js_file(file.to_str().unwrap(), &mut res, Genotype::TREATMENT).unwrap();
                     info!("done reading");
@@ -561,7 +563,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Unspliced.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                  vec![SplicingCategory::Unspliced],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, beta_bin)?;
+                  false, min_read, min_fail, thread as u32, beta_bin,
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
 
 
 
@@ -572,7 +576,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("WrongStrand.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::WrongStrand],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, beta_bin)?;
+                  false, min_read, min_fail, thread as u32, beta_bin, 
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
 
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::WrongStrand],
     //   p.to_str().unwrap() , false, min_read, min_fail));
@@ -581,7 +587,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Skipped.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                  vec![SplicingCategory::Skipped],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, beta_bin)?;
+                  false, min_read, min_fail, thread as u32, beta_bin,
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Skipped],
     //   p.to_str().unwrap() , false, min_read, min_fail));
         info!( "starting SkippedUnrelated" );
@@ -589,7 +597,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("SkippedUnrelated.tsv");
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::SkippedUnrelated],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, beta_bin)?;
+                  false, min_read, min_fail, thread as u32, beta_bin,
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::SkippedUnrelated],
     //   p.to_str().unwrap() , false, min_read, min_fail));
         info!( "starting Clipped" );
@@ -598,7 +608,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::Clipped],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, beta_bin)?;
+                  false, min_read, min_fail, thread as u32, beta_bin,
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
    
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::Clipped],
     //   p.to_str().unwrap() , false, min_read, min_fail));
@@ -608,7 +620,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
         run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::ExonOther],  p.to_str().unwrap(), 
-                  true, min_read, min_fail, thread as u32, beta_bin)?;
+                  true, min_read, min_fail, thread as u32, beta_bin,
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::ExonOther],
     //   p.to_str().unwrap(), true, min_read, min_fail));
            info!( "starting E_isoform" );
@@ -616,7 +630,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let _ = p.set_extension("Isoform.tsv");
             run_one_test( &shared, vec![SplicingCategory::Spliced],
                   vec![SplicingCategory::EIsoform],  p.to_str().unwrap(), 
-                  false, min_read, min_fail, thread as u32, beta_bin)?;
+                  false, min_read, min_fail, thread as u32, beta_bin,
+                control_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>(),
+                     treatment_files.iter().map(|x| x.display().to_string()).collect::<Vec<String>>())?;
     //jobs.push((vec![SplicingCategory::Spliced], vec![SplicingCategory::EIsoform],
     //   p.to_str().unwrap() , false, min_read, min_fail));
 

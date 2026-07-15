@@ -19,6 +19,7 @@ pub struct Counts {
     clipped: u32,
     exon_other: u32,
     skipped: u32,
+    skippedUnrelated: u32,
     wrong_strand: u32,
     e_isoform: u32,
 }
@@ -35,8 +36,9 @@ impl Counts {
             clipped: c[2],
             exon_other: c[3],
             skipped: c[4],
-            wrong_strand: c[5],
-            e_isoform: c[6],
+            skippedUnrelated: c[5],
+            wrong_strand: c[6],
+            e_isoform: c[7],
         }
     }
 
@@ -51,18 +53,20 @@ impl Counts {
         self.clipped += c[2];
         self.exon_other += c[3];
         self.skipped += c[4];
-        self.wrong_strand += c[5];
-        self.e_isoform += c[6];
+        self.skippedUnrelated += c[5];
+        self.wrong_strand += c[6];
+        self.e_isoform += c[7];
     }
 
     fn dump(&self) -> String {
         format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             self.spliced,
             self.unspliced,
             self.clipped,
             self.exon_other,
             self.skipped,
+            self.skippedUnrelated,
             self.wrong_strand,
             self.e_isoform
         )

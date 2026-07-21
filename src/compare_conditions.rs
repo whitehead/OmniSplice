@@ -303,8 +303,8 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
 
             match (ctrl_prop, treat_prop){
                 (Some(p_c), Some(p_t)) => {
-                    f.push(get_cohensh(p_c, p_t).to_string());
-                    f.push((p_t - p_c).to_string());
+                    f.push(get_cohensh(1.0 - p_c, 1.0 - p_t).to_string());
+                    f.push(((1.0-p_t) - (1.0 - p_c)).to_string());
                 }
                 _ => {
                     f.push("nan".to_string());

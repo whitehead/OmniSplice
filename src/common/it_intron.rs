@@ -30,6 +30,29 @@ use strand_specifier_lib::Strand;
 use strand_specifier_lib::{LibType, check_flag};
 use log::{info, debug, error, trace, warn};
 
+
+
+
+    macro_rules! write_jc_handle {
+        ($self_:expr, $handle_holder:expr, $category:ident,
+            $seq:expr, $r_name:expr, $cigar:expr, $start:expr,
+            $flag:expr, $record:expr) => {
+            
+                match &mut $handle_holder.$category {
+                    Some(handle) => { handle.write($self_.dump_junction_and_reads($seq, $r_name, $cigar, $start, $flag)?.as_bytes())?; },
+                    _ => (),
+                }
+            paste::paste!{ 
+                match &mut $handle_holder.[<$category _bam>] {
+                    Some(handle) => { let _ = handle.write($record); },
+                    _ => (),
+                }
+            };
+        };
+    }
+
+
+
 #[derive(Debug)]
 /// This structure is used in the intervall tree HASHMAP(contig) -> IT(intron(start, end)) -> TreeDataIntron
 /// Represent an intron or the start of end of the transcript.
@@ -70,6 +93,7 @@ impl TreeDataIntron {
 
     fn parse_read(
         &mut self,
+        record: &Record,
         aln_start: i64,
         aln_end: i64,
         cigar: &Cigar,
@@ -171,7 +195,7 @@ impl TreeDataIntron {
                 TreeDataIntron::update_splicing_counter(&mut self.counter_intron, Some(x));
                 // missing end argument cause this is a junction!
                 // TODO fix that
-                self.write_to_read_file_splicing_event(x, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag);
+                self.write_to_read_file_splicing_event(x, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag, record);
             }
             (None, Some(x)) => {
                 TreeDataIntron::update_splicing_counter(
@@ -179,7 +203,7 @@ impl TreeDataIntron {
                     Some(x),
                 );
                 TreeDataIntron::update_splicing_counter(&mut self.counter_intron, Some(x));
-                self.write_to_read_file_splicing_event(x, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag);
+                self.write_to_read_file_splicing_event(x, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag, record);
             }
             (Some(SplicingEvent::Spliced), Some(SplicingEvent::Spliced)) => {
                 TreeDataIntron::update_splicing_counter(
@@ -195,7 +219,7 @@ impl TreeDataIntron {
                     &mut self.counter_intron,
                     Some(SplicingEvent::Spliced),
                 );
-                self.write_to_read_file_splicing_event(SplicingEvent::Spliced, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag);
+                self.write_to_read_file_splicing_event(SplicingEvent::Spliced, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag, record);
             }
             (Some(SplicingEvent::Unspliced), Some(SplicingEvent::Unspliced)) => {
                 TreeDataIntron::update_splicing_counter(
@@ -211,7 +235,7 @@ impl TreeDataIntron {
                     &mut self.counter_intron,
                     Some(SplicingEvent::Unspliced),
                 );
-                self.write_to_read_file_splicing_event(SplicingEvent::Unspliced, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag);
+                self.write_to_read_file_splicing_event(SplicingEvent::Unspliced, out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag, record);
             }
             (Some(left), Some(right)) => {
                 TreeDataIntron::update_splicing_counter(
@@ -227,7 +251,7 @@ impl TreeDataIntron {
                     &mut self.counter_intron,
                     SplicingEvent::merge(Some(left), Some(right)),
                 );
-                self.write_to_read_file_splicing_event(SplicingEvent::merge(Some(left), Some(right)).unwrap(), out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag);
+                self.write_to_read_file_splicing_event(SplicingEvent::merge(Some(left), Some(right)).unwrap(), out_file_read_buffer_junc, &seq, &r_name, aln_start, cigar, flag, record);
             }
             (None, None) => (),
             (_, _) => (),
@@ -322,6 +346,8 @@ impl TreeDataIntron {
         return Ok(format!("{}\n", base_vec.join("\n")));
     }
 
+
+
     /// Spagetti code to be able to extract exon_others, spliced and isoforms
     fn write_to_read_file_splicing_event( &self,
         splicing_event: SplicingEvent,
@@ -330,15 +356,43 @@ impl TreeDataIntron {
         r_name: &str,
         start: i64,
         cigar: &Cigar,
-        flag: u16
+        flag: u16,
+        record: &Record
     ) -> Result<(), OmniError>{
         match splicing_event{
-            SplicingEvent::ExonOther => { match &mut out_file_read_buffer.exon_other {
-                Some(handle) => handle.write(self.dump_junction_and_reads(seq, r_name, cigar, start, flag)?.as_bytes())?,
-                _ =>0
-                    }
-                },
-            SplicingEvent::Isoform => {match &mut out_file_read_buffer.isoform {
+            SplicingEvent::ExonOther => 
+                
+                {write_jc_handle!(self, out_file_read_buffer, exon_other,
+                    seq, r_name, cigar, start, flag, record);},
+                
+                //match &mut out_file_read_buffer.exon_other {
+                //Some(handle) => handle.write(self.dump_junction_and_reads(seq, r_name, cigar, start, flag)?.as_bytes())?,
+                //_ =>0
+                //    };
+                //    match &mut out_file_read_buffer.exon_other_bam{
+                //        Some(handle) => {let _ = handle.write(record);},
+                //        _ => ()
+                //    };
+                
+
+                SplicingEvent::Spliced => {write_jc_handle!(self, out_file_read_buffer, spliced,
+                    seq, r_name, cigar, start, flag, record);},
+                SplicingEvent::Unspliced => {write_jc_handle!(self, out_file_read_buffer, unspliced,
+                    seq, r_name, cigar, start, flag, record);},
+                SplicingEvent::Clipped => {write_jc_handle!(self, out_file_read_buffer, clipped,
+                    seq, r_name, cigar, start, flag, record);},
+                SplicingEvent::WrongStrand => {write_jc_handle!(self, out_file_read_buffer, wrong_strand,
+                    seq, r_name, cigar, start, flag, record);},
+                SplicingEvent::Skipped => { write_jc_handle!(self, out_file_read_buffer, skipped,
+                    seq, r_name, cigar, start, flag, record);},
+                SplicingEvent::SkippedUnrelated => {write_jc_handle!(self, out_file_read_buffer, skipped_unrelated,
+                    seq, r_name, cigar, start, flag, record);},
+                SplicingEvent::Isoform => {write_jc_handle!(self, out_file_read_buffer, isoform,
+                    seq, r_name, cigar, start, flag, record);}
+                
+
+                
+            /*SplicingEvent::Isoform => {match &mut out_file_read_buffer.isoform {
                 Some(handle) => handle.write(self.dump_junction_and_reads(seq, r_name, cigar, start, flag)?.as_bytes())?,
                 _ =>0
                     }
@@ -371,9 +425,8 @@ impl TreeDataIntron {
             SplicingEvent::SkippedUnrelated => {match &mut out_file_read_buffer.skipped_unrelated {
                 Some(handle) => handle.write(self.dump_junction_and_reads(seq, r_name, cigar, start, flag)?.as_bytes())?,
                 _ =>0
-                    }
-                },
-            _ => 0
+                    }*/
+
         };
         Ok(())
     }
@@ -452,6 +505,8 @@ impl TreeDataIntron {
         };
         Ok(())
     }
+
+
 
     fn get_acceptor_donor(&self) -> (String, String) {
         let (mut left, mut right) = match (self.start, self.end) {
@@ -640,6 +695,7 @@ impl TreeDataIntron {
         Ok(results.join("\n"))
     }
 }
+
 
 /// we reads a gtf to generate an interval tree
 /// HASHMAP(contig) -> IT(intron(start, end)) -> TreeDataIntron
@@ -951,6 +1007,7 @@ pub fn update_tree_from_bam(
             if let Some(read_strand) = library_type.get_strand(flag) {
                 for (ref mut intron) in subtree.find_mut((pos_s - 1)..(pos_e + 1)) {
                     intron.data().parse_read(
+                        &record,
                         pos_s,
                         pos_e,
                         &cig,

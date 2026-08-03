@@ -17,10 +17,10 @@ log = "0.4"
 flexi_logger = { version = "0.31", features = ["async", "specfile"] }
 thiserror = "2"
 nalgebra = "0.35.0"
-statrs = "0.18.0"
-adjustp = "0.1.6"
+# statrs = "0.18.0"
+# adjustp = "0.1.6"
 rayon = "1.10"
-fishers_exact ="*"
+# fishers_exact ="*"
 paste = '1.0.15'
 
 [[bin]]

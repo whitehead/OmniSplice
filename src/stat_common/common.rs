@@ -17,12 +17,12 @@ use log::{debug, error, info, trace, warn};
 use crate::common::utils::ReadAssign;
 
 use super::super::common::error::OmniError;
-use super::errors::LogisticRegressionError;
-use statrs::distribution::{Discrete, DiscreteCDF, Hypergeometric, StudentsT, ContinuousCDF};
-use statrs::statistics::{Min, Max};
-use adjustp::{adjust, Procedure};
+//use super::errors::LogisticRegressionError;
+//use statrs::distribution::{Discrete, DiscreteCDF, Hypergeometric, StudentsT, ContinuousCDF};
+//use statrs::statistics::{Min, Max};
+//use adjustp::{adjust, Procedure};
 
-
+/* 
 pub fn apply_bh_correction<T>(
     items: &mut [T],
     get_p: impl Fn(&T) -> Option<f64>,
@@ -96,7 +96,7 @@ pub fn welch_t_test(a: &[f64], b: &[f64]) -> Result<TtestResult, LogisticRegress
     Ok(TtestResult{t_stat: Some(t_stat), p_value: Some(p_value), q_value: None})
 }
 
-
+*/
 #[cfg(test)]
 mod tttest {
     use super::*;

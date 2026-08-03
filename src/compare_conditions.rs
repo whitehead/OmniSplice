@@ -1,7 +1,7 @@
 #![allow(warnings)]
 
 use std::collections::{HashMap, HashSet};
-use std::fmt::format;
+use std::fmt::{self, format};
 use std::path::Path;
 use std::sync::Arc;
 use std::{fs, result};
@@ -19,24 +19,25 @@ use std::path::PathBuf;
 use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 
-mod stat_common;
-use stat_common::errors::LogisticRegressionError;
-use stat_common::common::{Tester, parse_js_file, Genotype, JunctionStats, SplicingCategory,
-     welch_t_test, TtestResult, apply_bh_correction};
-use stat_common::glm_logistic::{GLM};
-use stat_common::glm_beta_binomial::GLMBetaBinomiale;
+//mod stat_common;
+//use stat_common::errors::LogisticRegressionError;
+//use stat_common::common::{Tester, parse_js_file, Genotype, JunctionStats, SplicingCategory,
+//     welch_t_test, TtestResult, apply_bh_correction};
+//use stat_common::glm_logistic::{GLM};
+//use stat_common::glm_beta_binomial::GLMBetaBinomiale;
 
+//use stat_common::common::{parse_js_file, Genotype, JunctionStats, SplicingCategory};
 use std::process::{Command, Stdio};
 mod common;
 
 use common::error::OmniError;
 
 use nalgebra::{DMatrix, DVector};
-use statrs::distribution::{ChiSquared, ContinuousCDF};
-use adjustp::{adjust, Procedure};
+//use statrs::distribution::{ChiSquared, ContinuousCDF};
+//use adjustp::{adjust, Procedure};
 
 use crate::common::junction_file;
-use crate::stat_common::common::{TestResults, TestStatus};
+//use crate::stat_common::common::{TestResults, TestStatus};
 
 use flexi_logger::{FileSpec, Logger, WriteMode};
 use log::{debug, error, info, trace, warn};
@@ -44,6 +45,282 @@ use log::{debug, error, info, trace, warn};
 
 use rayon::prelude::*;
 use rayon::iter::Either;
+
+///
+
+
+ #[derive(Debug)]
+pub struct CountsStats{
+    spliced: u32,
+    unspliced: u32,
+    clipped: u32,
+    exon_other: u32,
+    skipped: u32,
+    skipped_unrelated: u32,
+    wrong_strand: u32,
+    e_isoform: u32,
+}
+
+impl CountsStats{
+
+    pub fn new(string: &[&str]) -> Self {
+        let c = string
+            .iter()
+            .map(|x| x.parse::<u32>().unwrap())
+            .collect::<Vec<u32>>();
+        CountsStats {
+            spliced: c[0],
+            unspliced: c[1],
+            clipped: c[2],
+            exon_other: c[3],
+            skipped: c[4],
+            skipped_unrelated: c[5],
+            wrong_strand: c[6],
+            e_isoform: c[7],
+        }
+    }
+
+    pub fn extract_(&self, category: &Vec<SplicingCategory>) -> u32{
+        let mut count = 0;
+
+        for cat in category{
+            match cat{
+                SplicingCategory::Spliced => {count += self.spliced}, 
+                SplicingCategory::Unspliced => {count += self.unspliced},
+                SplicingCategory::Clipped => {count += self.clipped},
+                SplicingCategory::ExonOther => {count += self.exon_other},
+                SplicingCategory::Skipped => {count += self.skipped}, 
+                SplicingCategory::SkippedUnrelated => {count += self.skipped_unrelated}, 
+                SplicingCategory::WrongStrand => {count += self.wrong_strand},
+                SplicingCategory::EIsoform => {count += self.e_isoform}
+            }
+        }
+        count
+    }
+}
+
+#[derive(Debug)]
+pub enum SplicingCategory{
+    Spliced, 
+    Unspliced,
+    Clipped,
+    ExonOther,
+    Skipped, 
+    SkippedUnrelated, 
+    WrongStrand,
+    EIsoform
+}
+
+
+impl TryFrom<&str> for SplicingCategory {
+    type Error = &'static str;
+    fn try_from(item: &str) -> Result<Self, Self::Error> {
+        match item {
+            "Spliced" | "SPLICED" => Ok(SplicingCategory::Spliced),
+            "Unspliced" | "UNSPLICED" => Ok(SplicingCategory::Unspliced),
+            "Clipped" | "CLIPPED" => Ok(SplicingCategory::Clipped),
+            "Exon_other" | "EXONOTHER" => Ok(SplicingCategory::ExonOther),
+            "Skipped" | "SKIPPED" => Ok(SplicingCategory::Skipped),
+            "SkippedUnrelated"| "SKIPPEDUNRELATED" => Ok(SplicingCategory::SkippedUnrelated),
+            "Wrong_strand" | "WRONGSTRAND" => Ok(SplicingCategory::WrongStrand),
+            "E_isoform" | "EISOFORM" => Ok(SplicingCategory::EIsoform),
+            _ => Err("input does not match one of the accepted values: Spliced Unspliced Clipped Exon_other Skipped SkippedUnrelated Wrong_strand  E_isoform")
+        }
+    }
+}
+
+impl fmt::Display for SplicingCategory {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+
+        match self {
+            SplicingCategory::Spliced => { write!(f, "SPLICED") }, 
+            SplicingCategory::Unspliced => { write!(f, "UNSPLICED") },
+            SplicingCategory::Clipped => { write!(f, "CLIPPED") },
+            SplicingCategory::ExonOther => { write!(f, "EXONOTHER") },
+            SplicingCategory::Skipped => { write!(f, "SKIPPED") }, 
+            SplicingCategory::SkippedUnrelated => { write!(f, "SKIPPEDUNRELATED") }, 
+            SplicingCategory::WrongStrand => { write!(f, "WRONGSTRAND") },
+            SplicingCategory::EIsoform => { write!(f, "EISOFORM") }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct JunctionStats{
+    pub contig: String, 
+    pub start: String, 
+    pub end: String, 
+    pub strand: String,
+    pub ambiguous: bool,
+    pub control_count: Vec<CountsStats>,
+    pub treat_count: Vec<CountsStats>,
+    pub gene_tr: HashSet<String>,
+    pub sample_done: HashSet<String>
+}
+
+impl JunctionStats{
+    pub fn get_pos_string(&self) -> String{
+        format!("{}:{}-{}({})", self.contig.clone(),
+           self.start.clone(),
+           self.end.clone(),
+           self.strand.clone())
+    }
+
+   
+}
+
+impl Hash for JunctionStats{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.contig.hash(state); 
+        self.strand.hash(state);
+        self.start.hash(state); 
+        self.end.hash(state);  
+    }
+}
+
+
+fn header_to_map(header:  &str) -> Result<HashMap<String, usize>, OmniError>{
+    Ok(header
+        .trim()
+        .split_whitespace()
+        .enumerate()
+        .map(|(i, v)| (v.to_string(), i))
+        .collect())
+    }
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Genotype{
+    CONTROL,
+    TREATMENT
+}
+
+pub fn parse_js_file(file_path: &str, result: &mut HashMap<String, JunctionStats>, genotype: Genotype) -> Result<(), OmniError>{
+
+
+
+        let path = Path::new(file_path);
+        let file_stem = format!("{:?}", path.file_stem().unwrap());
+        info!("opening file");
+        let f = File::open(file_path)?;
+        let mut reader = BufReader::new(f);
+        let mut header_line = String::new();
+
+        info!("reading header");
+        let len = reader.read_line(&mut header_line)?;
+        let header = header_to_map(&header_line)?;
+
+        
+        let mut line: String = "".to_string();
+        let mut spt: Vec<&str> = Vec::new();
+        let mut trimed : &str = "";
+        let mut gene: String = "".to_string();
+        let mut contig: String = "".to_string();
+        let mut strand : String = "".to_string();
+        let mut start: String = "".to_string();
+        let mut end: String = "".to_string();
+        let mut key: String = "".to_string();
+
+        for iterline in reader.lines(){
+            line = iterline?;
+            trimed = line.trim();
+
+            if trimed.is_empty(){continue}
+            spt = trimed.split("\t").collect::<Vec<&str>>();
+
+            let ambi = if spt[*header.get("Ambiguous").unwrap()] == "true" {true} else {false}; 
+  
+            gene = format!("{}_{}_{}", spt[*header.get("Gene").unwrap()], spt[*header.get("Transcript").unwrap()], spt[*header.get("Intron").unwrap()]);
+            contig = spt[*header.get("Contig").unwrap()].to_string();
+            strand = spt[*header.get("Strand").unwrap()].to_string();
+            start = if strand == "+" {spt[*header.get("Donnor").unwrap()].to_string()} else {spt[*header.get("Acceptor").unwrap()].to_string()};
+            end = if strand == "+" {spt[*header.get("Acceptor").unwrap()].to_string()} else {spt[*header.get("Donnor").unwrap()].to_string()};
+            
+            key = format!("{} {} {} {}", contig, strand, start, end);
+
+
+            // 3. case
+            // never seen 
+            // made in previous file
+            // already seen in this file
+
+            let mut never = false;
+            let mut made = false; 
+            let mut visited = false;
+
+            if !result.contains_key(&key){
+                never = true
+            }
+            else if result.get(&key).unwrap().sample_done.contains(&file_stem) {
+                visited=true
+            }
+            else {
+                made = true
+            }
+
+
+
+            if never{
+                let counts = CountsStats::new(&spt[8..]);
+                let mut junction = JunctionStats{
+                        contig: contig, 
+                        start: start, 
+                        end: end, 
+                        strand: strand,
+                        ambiguous: ambi,
+                        control_count: Vec::new(),
+                        treat_count: Vec::new(),
+                        gene_tr: HashSet::new(),
+                        sample_done: HashSet::new()
+                };
+                junction.sample_done.insert(file_stem.clone());
+                junction.gene_tr.insert(gene);
+                match genotype {
+                    Genotype::CONTROL => {junction.control_count.push(counts);}
+                    Genotype::TREATMENT => {junction.treat_count.push(counts);}
+                }
+                result.insert(key.clone(), junction); // TODO remove this clonae after debug
+            }
+            else if made{
+                let counts = CountsStats::new(&spt[8..]);
+                match result.get_mut(&key){
+                    Some(j) => {
+                        j.sample_done.insert(file_stem.clone());
+                        j.gene_tr.insert(gene);
+                        match genotype {
+                        Genotype::CONTROL => {j.control_count.push(counts);}
+                        Genotype::TREATMENT => {j.treat_count.push(counts);}
+                        }
+                    },
+                     None => {warn!("unreachable 'made' case in parse js"); ()}
+                }
+                
+            }
+            else if visited{
+                match result.get_mut(&key){
+                    Some(j) => {
+                        j.sample_done.insert(file_stem.clone());
+                        j.gene_tr.insert(gene);
+                    },
+                    None => {warn!("unreachable 'visited' case in parse js"); ()}
+            }
+        }
+
+        /*if spt[*header.get("Gene").unwrap()] == "FBgn0000015"{
+                warn!("{:?}", spt);
+                warn!("{:?} {:?} {:?} {:?}", key.clone(), never, visited, made);
+                warn!("{:?}", result.get(&key));
+
+            } */
+
+    }
+    Ok(())
+}
+
+
+
+///
+
 
 
 
@@ -133,7 +410,7 @@ fn helper_6(value: Option<f64>) -> String{
 fn get_cohensh(pcontrol: f32, ptreat: f32) -> f32{
     2.0 * (ptreat.sqrt().asin() - pcontrol.sqrt().asin()) //f64.asin() 
 }
-
+/* 
 fn parse_results_update_vec(vec_r: &Vec<(&JunctionStats, TestResults, TtestResult)>,
                             result: &mut Vec<Vec<String>>){
 
@@ -205,7 +482,7 @@ fn parse_results_update_vec(vec_r: &Vec<(&JunctionStats, TestResults, TtestResul
         result.push(f)
     }
 }
-
+*/
 
 
 

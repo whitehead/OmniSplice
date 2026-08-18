@@ -413,6 +413,7 @@ fn graph_from_gtf(
     Ok(g)
 }
 
+
 pub fn get_invalid_pos(file: &str) -> Result<HashSet<(String, i64)>, OmniError> {
     let g = graph_from_gtf(file)?;
     let mut seen = HashSet::new();

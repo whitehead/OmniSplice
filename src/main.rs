@@ -254,12 +254,12 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         Err::<(), OmniError>(OmniError::Expect("Error: Overhang expect strictly positive value >=1".to_string()));
     }
     
-    let header_reads_handle = "read_name\tcig\tflag\taln_start\tread_assign\tfeature.pos\tnext_exon\tfeature.exon_type\tfeature.strand\tsequence\n".as_bytes(); //.expect("Unable to write file");
+    let header_reads_handle_exon = "contig\taln_start\tgene_id\ttranscript_id\tstrand\texon_JType\tread_name\tcig\tsequence\n".as_bytes();
     let mut read_out_handle = ReadToWriteHandle::new();
     update_read_to_write_handle(
         &mut read_out_handle,
         args.read_to_write,
-        header_reads_handle,
+        header_reads_handle_exon,
         &output_file_prefix,
     );
 
@@ -267,7 +267,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let header = rust_htslib::bam::Header::from_template(bam.header());
     drop(bam);
 
-    let header_handle_junc = "contig\tgene_id\ttranscript_id\tstrand\tJ_left\tJ_right\taln_start\tcigar\tsequence\n".as_bytes();
+    let header_handle_junc = "contig\tgene_id\ttranscript_id\tstrand\tJ_left\tJ_right\tread_name\taln_start\tcigar\tflag\tsequence\n".as_bytes();
     let mut read_out_handle_jun = ReadToWriteHandleJunc::new();
         update_read_to_write_handle_junc(
         &mut read_out_handle_jun,

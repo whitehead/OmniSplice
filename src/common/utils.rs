@@ -463,7 +463,7 @@ impl fmt::Display for ExonType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ExonType::Donnor => {
-                write!(f, "Donnor")
+                write!(f, "Donor")
             }
             ExonType::Acceptor => {
                 write!(f, "Acceptor")

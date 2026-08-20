@@ -680,9 +680,9 @@ enum Commands {
        min_read: u32,
 
 
-        /// we have 4 count categor control succ, control fail, treat succ, treat fail
-        ///  if  control succ < min_fail and control fail < min_fail  -> fail the the test
-        /// if  treat succ < min_fail and treat fail < min_fail  -> fail the the test
+       /// The data is organize as the count for 4 categories: control succ, control fail, treat succ, treat fail
+       /// if  control succ < min_fail AND control fail < min_fail  -> fail the the test
+       /// if  treat succ < min_fail AND treat fail < min_fail  -> fail the the test
        /// Default: 10
        #[arg( long, default_value_t = 10)]
        min_fail: u32,

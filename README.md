@@ -20,16 +20,23 @@ you new reauired R with aod instaled in your path.  by default OmniSplice uses  
 Omnisplice is a tool to categorize all reads present at exon's extremity.
 get more info reading the paper: https://www.biorxiv.org/content/10.1101/2025.04.06.647416v1
 
-This file follow the following organisation:
+## Table of contents
 
-    - Quick uses
-    - 
-    - Installation
-    - Input Files
-    - Command details
-    - Output Files
-    - Context and discussion.
-    - Algorithm overview
+- [Patch note](#patch-note)
+- [To keep in mind](#to-keep-in-mind)
+- [Quick uses](#quick-uses)
+- [Installation](#installation)
+  - [Rust installation](#rust-installation)
+- [Input Files](#input-files)
+- [Command details](#command-details)
+- [Strandness and libtype](#strandness-and-libtype)
+  - [In case of unstranded data](#in-case-of-unstranded-data-uses)
+- [Context and discussion](#context-and-discussion)
+- [Output Files](#output-files)
+- [Algorithm overview](#algorithm-overview)
+- [Add-on](#add-on)
+  - [Gene visualisation](#gene-visualisation)
+  - [Splicing efficiency](#splicing-efficiency)
 
 Don't hesitate to open an issue if you have any problem or have any suggestions.
 

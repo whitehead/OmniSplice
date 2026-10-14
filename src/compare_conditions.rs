@@ -712,9 +712,8 @@ enum Commands {
         #[arg(short, long, num_args = 1.., required = true)]
         treatment_files: Vec<PathBuf>,
 
-        /// The data is organize as the count for 4 categories: control succ, control fail, treat succ, treat fail
-       /// if  control succ < min_read OR treat succ < min_read  -> fail the the test
-       /// Default: 30
+       /// Minimum read count for test succes + failure in each group must be >= min_read. Discards junctions (p-value = NaN) .
+       /// Default: 30 |
        #[arg( long, default_value_t = 30)]
        min_read: u32,
 

@@ -60,72 +60,79 @@ mod splicing_efficiency;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Name of Input file
+    /// Name of the input BAM file (sorted and indexed).
     #[arg(short, long, required = true, help_heading = "Input Options")]
     input: String,
-    /// Prefix name  to be used for Output file
+    /// Prefix to be used for the output files.
     #[arg(short, long, required = true, help_heading = "Output Options")]
     output_file_prefix: String,
-    /// Name of GTF Input file define the feature to look at
-    /// (v1) only consider feature annotated as exon
-    /// if you use output_write_read with the whole genome the output can be very large,
-    /// you may want to subset genes / features you are interested in.
+    /// Name of the GTF input file defining the features to look at.
+    /// (v1) Only features annotated as exon are considered.
+    /// If you use --read-to-write or --read-to-write-junc with the whole genome, the output can be very large;
+    /// you may want to subset the genes/features you are interested in.
     #[arg(short, long, required = true, help_heading = "Input Options")]
     gtf: String,
 
 
     /// OmniSplice first identifies reads that align to exon ends and requires them to align at least X contiguous bases before the exon boundary. Then, for reads identified as unspliced, it requires at least X contiguous bases extending from the exon end into the intron.
     /// Default for both: 3.
-    /// Use --anchor to set both values, or set them individually with --anchor_exon and --anchor_intron.
-    /// must be stricly > 0;
+    /// Use --anchor to set both values, or set them individually with --anchor-exon and --anchor-intron.
+    /// Must be strictly > 0.
     #[arg(long, help_heading = "Anchor Options")]
     anchor: Option<i64>,
+    /// Minimum number of contiguous aligned bases before the exon boundary.
+    /// Overrides --anchor for the exon side.
     #[arg(long, help_heading = "Anchor Options")]
     anchor_exon: Option<i64>,
+    /// Minimum number of contiguous aligned bases extending into the intron for unspliced reads.
+    /// Overrides --anchor for the intron side.
     #[arg(long, help_heading = "Anchor Options")]
     anchor_intron: Option<i64>,
 
+    /// BAM flags a read must have.
     #[arg(long, default_value_t = 0, help_heading = "QC Options")]
     flag_in: u16,
+    /// BAM flags a read must not have.
     #[arg(long, default_value_t = 3840, help_heading = "QC Options")]
     flag_out: u16,
+    /// Minimum mapping quality.
     #[arg(long, default_value_t = 13, help_heading = "QC Options")]
     mapq: u8,
-    /// mostly deprecated, sue read_to_write_junc instead,  only usage is for Backsplicing detection with clipped value. output reads abased on exon end category.
+    /// Mostly deprecated, use --read-to-write-junc instead. Its only remaining use is backsplicing detection with the soft-clipped value.
+    /// Outputs reads based on their exon-end category.
     #[clap(long, value_parser, value_delimiter = ' ', num_args = 1.., help_heading = "Output Options")]
     read_to_write: Vec<ReadsToWrite>,
-    /// space separated list of the spliceEvent read you want to extract ( This is relative to the junctions); i.e. all Spliced, exon_other...
-    ///
+    /// Space-separated list of the splicing event categories (relative to the junctions) whose reads you want to extract,
+    /// e.g. spliced, exon-other...
     #[clap(long, value_parser, value_delimiter = ' ', num_args = 1.., help_heading = "Output Options")]
     read_to_write_junc: Vec<ReadsToWriteSEvent>,
-    /// space separated list the column to use for "unspliced" for the splicing defect table.
-    /// you can regenrate this using the splicing_efficiency exe
-    /// What to consider as unspliced? spliced, unspliced, clipped, exon_other, skipped,
-    /// wrong_strand, isoform\n
-    /// by default only use "-u unspliced" ->  unspliced (readthrough) reads \n
-    /// to use unspliced and clipped : "-u unspliced clipped"
+    /// Space-separated list of the categories counted as "unspliced" in the splicing efficiency table
+    /// (this table can be regenerated with the splicing_efficiency executable).
+    /// Accepted values: spliced, unspliced, clipped, exon_other, skipped, wrong_strand, isoform.
+    /// By default, only unspliced (read-through) reads are used.
+    /// To use unspliced and clipped reads: --unspliced-def unspliced clipped
     #[clap(long, value_parser, default_value = "unspliced", value_delimiter = ' ', num_args = 1.., help_heading = "Output Options")]
     unspliced_def: Vec<String>,
 
-    /// What to consider as spliced? spliced, unspliced, clipped, exon_other, skipped,
-    /// wrong_strand, isoform\n
-    /// by default only use "-u spliced" -> spliced (readthrough) reads \n
-    /// to use spliced and isoform : "-u spliced isoform"
+    /// Space-separated list of the categories counted as "spliced" in the splicing efficiency table.
+    /// Accepted values: spliced, unspliced, clipped, exon_other, skipped, wrong_strand, isoform.
+    /// By default, only spliced reads are used.
+    /// To use spliced and isoform reads: --spliced-def spliced isoform
     #[clap(long, value_parser, default_value = "spliced", value_delimiter = ' ', num_args = 1.., help_heading = "Output Options")]
     spliced_def: Vec<String>,
 
-    /// Librairy types used for the RNAseq most modern stranded RNAseq are frFirstStrand which is the default value.
-    /// acceptable value: frFirstStrand, frSecondStrand, fFirstStrand, fSecondStrand, ffFirstStrand, ffSecondStrand, rfFirstStrand,
-    ///  rfSecondStrand, rFirstStrand, rSecondStrand, Unstranded, PairedUnstranded
+    /// Library type used for the RNA-seq. Most modern stranded RNA-seq libraries are frFirstStrand, which is the default value.
+    /// Accepted values: frFirstStrand, frSecondStrand, fFirstStrand, fSecondStrand, ffFirstStrand, ffSecondStrand, rfFirstStrand,
+    /// rfSecondStrand, rFirstStrand, rSecondStrand, Unstranded, PairedUnstranded
     #[clap(long, value_parser, default_value = "frFirstStrand", help_heading = "Input Options")]
     libtype: LibType,
 
-    /// loglevel default info, accepted value: info, error, debug, trace, warn
+    /// Log level. Accepted values: error, warn, info, debug, trace
     #[clap(long, value_parser, default_value = "info", help_heading = "Output Options")]
     log_level: String,
 }
 
-/// This run the core of the program, will parse a gtf and a bam file and write a category file and if requested a read file.
+/// Runs the core of the program: parses a GTF and a BAM file, and writes a category file and, if requested, a read file.
 fn main_loop(
     //output: String,
     //out_j: String,
@@ -146,7 +153,7 @@ fn main_loop(
     let bam_file = bam_input;
 
     let gtf_file = gtf;
-    info!("building the interval tree");
+    info!("Building the interval tree.");
     let mut hash_tree =
         interval_tree_from_gtfmap(gtf_hashmap).expect("failed to generate the hash tree from gtf");
 
@@ -248,8 +255,8 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     info!("END ARGS:");
 
     if anchor <= 0 || anchor_exon <= 0 || anchor_intron <= 0 {
-        error!("anchors options must be stricltly positive > 0");
-        Err::<(), OmniError>(OmniError::Expect("Error: Overhang expect strictly positive value >=1".to_string()));
+        error!("anchor options must be strictly positive (> 0)");
+        return Err(OmniError::Expect("Error: anchor options expect strictly positive values (>= 1)".to_string()).into());
     }
     
     let header_reads_handle_exon = "contig\taln_start\tgene_id\ttranscript_id\tstrand\texon_JType\tread_name\tcig\tsequence\n".as_bytes();
@@ -277,14 +284,14 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
 
     info!("Parsing gtf file.");
-    info!("Getting all ambiguous position");
+    info!("Getting all ambiguous positions.");
     let ambiguous_position = get_invalid_pos(&args.gtf.clone())?;
     // for ambigious
     let exon_it = exon_intervalltree(&args.gtf.clone())?;
     let gtf_hashmap = gtf_to_hashmap(&args.gtf.clone()).expect("failed to parse gtf");
-    info!("getting all valid junction to identify isoform");
+    info!("Getting all valid junctions to identify isoforms.");
     let valid_j_gene = get_all_junction_for_a_gene(&gtf_hashmap)
-        .map_err(|e| format!("failed to get all junctions for genes must abort: {e}"))?;
+        .map_err(|e| format!("failed to get all junctions for genes, must abort: {e}"))?;
 
     let tree = main_loop(
         // output.clone(),
@@ -303,7 +310,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         &valid_j_gene,
     )?;
 
-    info!("main loop ended writting results");
+    info!("Main loop ended, writing results.");
 
     let junction_order: Vec<SplicingEvent> = vec![
         SplicingEvent::Spliced,

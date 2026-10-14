@@ -152,51 +152,51 @@ def checkinput_args(args):
     try:
         assert args.gene_list or args.transcript_list and not (args.gene_list and args.transcript_list)
     except AssertionError:
-        logging.error("either one or the other but not both arguments [--gene_list] [--transcript_list] should be set")
+        logging.error("exactly one of [--gene_list] or [--transcript_list] must be set, not both")
         raise
 
     try:
         assert not args.group3 or (args.group3 and (args.group1 and args.group2))
     except AssertionError:
-        logging.error("group3 should only be set if group 1 and 2 are set")
+        logging.error("--group3 should only be set if --group1 and --group2 are set")
         raise
     
     try: 
         assert not args.group2 or (args.group1 and args.group2)
     except AssertionError:
-        logging.error("group2 should only be set if group 1 is set")
-
+        logging.error("--group2 should only be set if --group1 is set")
+        raise
     try:
         assert len(args.color) >= len(args.splicing_defect)
     except:
-        logging.error("you shoudl provides more color than splicing defect")
+        logging.error("you should provide at least as many colors as splicing defects")
         raise
 
 if __name__ == "__main__":
-    parse = argparse.ArgumentParser(description="""to plot junction defect for gene and transcript, from Omnisplice junction file.
-    Accept from one up to three genotypes/groups simultaneous.
-    (it merge and sums file from the same genotype.)
-    you can either submit file using glob or space seprate them.
-    you can submit multiple gene or transcript at the moment you must use either but not both gene_list or transcript_list
-    example usage:
-    python omnisplice/gene_visualisation.py 
-    -gtf <gtf file> --group1 genotype1*junctions --group1_name <genotype1 name> --gene_list FBgn0001313 --outfile_prefix my_plot""") # Can do more but will need a some works to make it able to handle X genotypes  
+    parse = argparse.ArgumentParser(description="""Plot junction defects for genes and transcripts from OmniSplice junction files.
+    Accepts one to three genotypes/groups simultaneously
+    (files from the same genotype are merged and their counts summed).
+    You can submit files either using a glob or as a space-separated list.
+    You can submit multiple genes or transcripts; at the moment, you must use either --gene_list or --transcript_list, but not both.
+    Example usage:
+    python omnisplice/gene_visualisation.py
+    --group1 genotype1*junctions --group1_name <genotype1 name> --gene_list FBgn0001313 --outfile_prefix my_plot""") # Could do more, but would need some work to handle X genotypes
     
-    parse.add_argument("--group1", nargs="+", required=True, help="junctions file for group 1")
-    parse.add_argument("--group2", nargs="+", required=False, help="junctions file for group 2")
-    parse.add_argument("--group3", nargs="+", required=False, help="Optional junctions file for group 3")
+    parse.add_argument("--group1", nargs="+", required=True, help="junction files for group 1")
+    parse.add_argument("--group2", nargs="+", required=False, help="optional junction files for group 2")
+    parse.add_argument("--group3", nargs="+", required=False, help="optional junction files for group 3")
 
-    parse.add_argument("--group1_name", required=False, default='group1', help="name group 1")
+    parse.add_argument("--group1_name", required=False, default='group1', help="name for group 1")
     parse.add_argument("--group2_name", required=False, default='group2', help="name for group 2")
-    parse.add_argument("--group3_name", required=False, default='group3', help="Optional name group 3")
+    parse.add_argument("--group3_name", required=False, default='group3', help="name for group 3")
     parse.add_argument("--color", nargs="+", default=["#D3D3D385", "#214d4e",  "#cc655b", '#41bbc5',
                                                       "#c6dbae", '#069668',  '#b3e61c',  '#d55e00', '#cc78bc',
                                                       '#ca9161', '#fbafe4',  '#029e73'])
     
     parse.add_argument("--gene_list", nargs="+", required=False, help='gene list to plot')
-    parse.add_argument("--transcript_list", nargs="+", required=False, help='gene list to plot')
-    parse.add_argument("--hide_count", action='store_false', help='do not show total count')
-    parse.add_argument("--outfile_prefix", required=True, help='basename for output')
+    parse.add_argument("--transcript_list", nargs="+", required=False, help='transcript list to plot')
+    parse.add_argument("--hide_count", action='store_false', help='do not show the total count')
+    parse.add_argument("--outfile_prefix", required=True, help='prefix for the output files')
 
     parse.add_argument("--splicing_defect", nargs="+", help="""default = SPLICED, UNSPLICED, CLIPPED, EXON_OTHER""", 
                         default=["SPLICED" , "UNSPLICED",  "CLIPPED",  "EXON_OTHER"],
@@ -209,9 +209,9 @@ if __name__ == "__main__":
                                  "E_ISOFORM",
                                   "SKIPPED_UNR"] )
 
-    parse.add_argument("--format",  default='.pdf', help='output format default: ".pdf"')
-    parse.add_argument("--fig_width",  default=6.4, help="")
-    parse.add_argument("--fig_height",  default=4.8, help='')
+    parse.add_argument("--format",  default='.pdf', help='output format, default: ".pdf"')
+    parse.add_argument("--fig_width", type=float, default=6.4, help="")
+    parse.add_argument("--fig_height", type=float,  default=4.8, help='')
     parse.add_argument("--logging_level", "-v", default="INFO",choices=["DEBUG", "INFO", "ERROR"])
 
     args = parse.parse_args()
@@ -242,8 +242,10 @@ if __name__ == "__main__":
 
     for file in args.group1:
         parse_js_file(file=file, results=dico_result, genotype=args.group1_name, ambiguous=True, gene_list=args.gene_list, transcript_list=args.transcript_list)
-    for file in args.group2:
-        parse_js_file(file=file, results=dico_result, genotype=args.group2_name, ambiguous=True, gene_list=args.gene_list, transcript_list=args.transcript_list)
+    if args.group2:
+        logging.debug("group2")
+        for file in args.group2:
+            parse_js_file(file=file, results=dico_result, genotype=args.group2_name, ambiguous=True, gene_list=args.gene_list, transcript_list=args.transcript_list)
     if args.group3:
             logging.debug("group3")
             for file in args.group3:

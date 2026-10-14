@@ -40,7 +40,7 @@ impl FromStr for SplicingChoice {
             "clipped" => Ok(SplicingChoice::Clipped(10)),
             "exon_other" => Ok(SplicingChoice::ExonOther(11)),
             "skipped" => Ok(SplicingChoice::Skipped(12)),
-            "skipped_unrelated" => Ok(SplicingChoice::Skipped(13)),
+            "skipped_unrelated" => Ok(SplicingChoice::SkippedUnrelated(13)),
             "wrong_strand" => Ok(SplicingChoice::WrongStrand(14)),
             "isoform" => Ok(SplicingChoice::Isoform(15)),
             _ => Err(SplicingChoiceError),
@@ -63,13 +63,13 @@ impl SplicingChoice {
     }
 }
 
-/// This is a self contain file that parse the table file and output an splicing effiency table.
-/// i am unsure if I keep it separate or integrate it to the main software or both
-/// it is to replicate and more the exact formual of spilcinge
+/// This is a self-contained file that parses the junction table file and outputs a splicing efficiency table.
+/// I am unsure whether to keep it separate, integrate it into the main software, or both.
+/// It replicates (and extends) the exact splicing efficiency formula.
 //
-// we want to support:
-// - either Donor only Acceptor only or both
-// - we want to support the combination of different fields. "unspliced" + "exon_other" ...
+// We want to support:
+// - Donor only, Acceptor only, or both.
+// - Combinations of different fields: "unspliced" + "exon_other" ...
 //
 
 struct Intron {
@@ -82,7 +82,7 @@ struct Intron {
     strand: Strand,
     spliced: u32,
     unspliced: u32,
-    // TODO [FUTURE] [IMPROVMENT] may be parse the matching table file and give the details:
+    // TODO [FUTURE] [IMPROVEMENT] maybe parse the matching table file and give the details:
     // unspliced_Donor: u32,
     // unspliced_acceptor: u32,
     // unspliced_common: u32
@@ -284,7 +284,7 @@ pub fn to_se_from_junction(
         let output_cmd = Std_Command::new("sort")
             .args(["-k", "1g", "-k", "5,5", "-k", "2n", &presorted])
             .output()
-            .expect(" sort command failed to start");
+            .expect("sort command failed to start");
 
         let mut file = OpenOptions::new()
             .create(true)
@@ -299,7 +299,7 @@ pub fn to_se_from_junction(
     let _ = Std_Command::new("rm")
         .args([&presorted.clone()])
         .spawn()
-        .expect(" rm command failed to start")
+        .expect("rm command failed to start")
         .wait();
 }
 
@@ -307,29 +307,27 @@ pub fn to_se_from_junction(
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Name of the junction Input file
+    /// Name of the input junction file.
     #[arg(short, long, required = true)]
     input: String,
-    /// Name of the Output file
+    /// Name of the output file.
     #[arg(short, long, required = true)]
     output: String,
-    /// space separated list the column to use for "unspliced" for the splicing defect table.
-    /// you can regenrate this using the splicing_efficiency exe
-    /// What to consider as unspliced? spliced, unspliced, clipped, exon_other, skipped, skipped_unrelated
-    /// wrong_strand, isoform\n
-    /// by default only use "-u unspliced" ->  unspliced (readthrough) reads \n
-    /// to use unspliced and clipped : "-u unspliced clipped"
+    /// Space-separated list of the categories counted as "unspliced" in the splicing efficiency table.
+    /// Accepted values: spliced, unspliced, clipped, exon_other, skipped, skipped_unrelated, wrong_strand, isoform.
+    /// By default, only unspliced (read-through) reads are used.
+    /// To use unspliced and clipped reads: --unspliced-def unspliced clipped
     #[clap(long, value_parser, default_value = "unspliced", value_delimiter = ' ', num_args = 1..)]
     unspliced_def: Vec<String>,
 
-    /// What to consider as spliced? spliced, unspliced, clipped, exon_other, skipped,
-    /// wrong_strand, isoform\n
-    /// by default only use "-u spliced" -> spliced (readthrough) reads \n
-    /// to use spliced and isoform : "-u spliced isoform"
+    /// Space-separated list of the categories counted as "spliced" in the splicing efficiency table.
+    /// Accepted values: spliced, unspliced, clipped, exon_other, skipped, skipped_unrelated, wrong_strand, isoform.
+    /// By default, only spliced reads are used.
+    /// To use spliced and isoform reads: --spliced-def spliced isoform
     #[clap(long, value_parser, default_value = "spliced", value_delimiter = ' ', num_args = 1..)]
     spliced_def: Vec<String>,
-    /// if set will consider ambiguous junction.
-    /// An ambiguous junction is an exon intron junction that overlap with an exon.
+    /// If set, ambiguous junctions are included.
+    /// An ambiguous junction is an exon-intron junction that overlaps another exon.
     #[clap(long, action)]
     ambiguous: bool,
 }

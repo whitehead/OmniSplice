@@ -14,7 +14,7 @@ you new reauired R with aod instaled in your path.  by default OmniSplice uses  
 
 
 
-[TOC] 
+
 
 
 Omnisplice is a tool to categorize all reads present at exon's extremity.

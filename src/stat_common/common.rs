@@ -342,8 +342,8 @@ pub fn parse_js_file(file_path: &str, result: &mut HashMap<String, JunctionStats
             gene = format!("{}_{}_{}", spt[*header.get("Gene").unwrap()], spt[*header.get("Transcript").unwrap()], spt[*header.get("Intron").unwrap()]);
             contig = spt[*header.get("Contig").unwrap()].to_string();
             strand = spt[*header.get("Strand").unwrap()].to_string();
-            start = if strand == "+" {spt[*header.get("Donnor").unwrap()].to_string()} else {spt[*header.get("Acceptor").unwrap()].to_string()};
-            end = if strand == "+" {spt[*header.get("Acceptor").unwrap()].to_string()} else {spt[*header.get("Donnor").unwrap()].to_string()};
+            start = if strand == "+" {spt[*header.get("Donor").unwrap()].to_string()} else {spt[*header.get("Acceptor").unwrap()].to_string()};
+            end = if strand == "+" {spt[*header.get("Acceptor").unwrap()].to_string()} else {spt[*header.get("Donor").unwrap()].to_string()};
             
             key = format!("{} {} {} {}", contig, strand, start, end);
 

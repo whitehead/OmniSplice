@@ -3,13 +3,14 @@ Welcome to the omnisplice read me.
 # patch note
 > 0.5
 > rework of compare conditions
-> A - Omnisplice statistical approaches have been reworked, and instead of a logistic glm, provides both beta binomila model and t-test. the reason is that the logistic binomial sensible to overdispersion. To so so Omnisplice uses a R code that uses established library, so you need R and Rscript on your path. 
+> A - Omnisplice statistical approaches have been reworked, and know use R aod library.
+you new reauired R with aod instaled in your path.  by default OmniSplice uses  (Fischer extact test, logistic glm). to use beta binomial t-test uses the  "--beta-bin"flag
 
 > B - compare_conditions now as a new parameter '--thread' allowing you to use multi threading. This is usefull because the new test (beta binomial) is way slower. 
 
-> WARNING! by default uses  (Fischer extact test, logistic glm). to use beta binomial t-test uses the  "--beta-bin"flag
-
-> C - I changed the output of "compare_conditions" adding CI, cohensh, psidelta, and the position are now represented as chr:start-end(strand). 
+> C - I changed the output of "compare_conditions" adding CI, cohens'h, psi-delta, and the position are now represented as chr:start-end(strand). 
+> typo Donnor -> Donor corrected. 
+> now can selected to 
 
 
 Omnisplice is a tool to categorize all reads present at exon's extremity.
@@ -160,8 +161,7 @@ Options:
       --overhang <OVERHANG>
           size of overhang [default: 1]
       --output-write-read <OUTPUT_WRITE_READ>
-          path to a file (must not exist) Uses if you want to output the reads with their category.
-          by default output all reads, this behaviour can be change using flags: clipped...
+          path to a file (must not exist) Uses if you want to output the reads with their category. this behaviour can be change using flags: clipped...
       --flag-in <FLAG_IN>
           [default: 0]
       --flag-out <FLAG_OUT>
@@ -235,8 +235,8 @@ OmniSplice uses the flag from the alignment + the layout information (libtype ar
         for each feature they are as many line as ReadCategory found for this specific feature
 
     with:
-        ExonType:   [Donnor | Acceptor] indicate if the exon extremity is a junction donnor of acceptor.
-            Note: the start of the gene is Acceptor, the end of the gene is Donnor.
+        ExonType:   [Donor | Acceptor] indicate if the exon extremity is a junction Donor of acceptor.
+            Note: the start of the gene is Acceptor, the end of the gene is Donor.
         
         ReadCategory:
             * ReadJunction(n, m) -> junction read from n, m
@@ -256,7 +256,7 @@ OmniSplice uses the flag from the alignment + the layout information (libtype ar
         contig | gene_name | transcript_name | exon_number | ambiguous | strand | pos | next | exon_type | spliced | unspliced | clipped | exon_other | skipped  | wrong_strand | e_isoform
     
     the junction file (.tsv file):
-        contig | gene_name | transcript_name | intron_number | strand | ambiguous | Donnor | Acceptor | spliced | unspliced | clipped | exon_other | skipped  | wrong_strand | e_isoform
+        contig | gene_name | transcript_name | intron_number | strand | ambiguous | Donor | Acceptor | spliced | unspliced | clipped | exon_other | skipped  | wrong_strand | e_isoform
 
 
 

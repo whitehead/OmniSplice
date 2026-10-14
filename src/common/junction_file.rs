@@ -79,7 +79,7 @@ struct Junction {
     transcript: String,
     ambiguous: bool,
     intron_number: u16,
-    donnor: String,
+    Donor: String,
     acceptor: String,
     strand: Strand,
     counts: Counts,
@@ -88,7 +88,7 @@ struct Junction {
 impl PartialEq for Junction {
     fn eq(&self, other: &Self) -> bool {
         self.contig == other.contig
-            && self.donnor == other.donnor
+            && self.Donor == other.Donor
             && self.acceptor == other.acceptor
             && self.strand == other.strand
     }
@@ -98,7 +98,7 @@ impl Hash for Junction{
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.contig.hash(state); 
         self.strand.hash(state);
-        self.donnor.hash(state); 
+        self.Donor.hash(state); 
         self.acceptor.hash(state);  
     }
 }
@@ -113,7 +113,7 @@ impl Junction {
             self.gene,
             self.transcript,
             self.intron_number,
-            self.donnor,
+            self.Donor,
             self.acceptor,
             self.strand,
             self.ambiguous,
@@ -129,12 +129,12 @@ impl Junction {
             .parse::<u16>()
             .expect("unable to parse exon number junction");
 
-        let pos = if exon_type == "Donnor" {
+        let pos = if exon_type == "Donor" {
             string[utils::get_header!("pos", header)]
         } else {
             string[utils::get_header!("next", header)]
         };
-        let next = if exon_type == "Donnor" {
+        let next = if exon_type == "Donor" {
             string[utils::get_header!("next", header)]
         } else {
             string[utils::get_header!("pos", header)]
@@ -150,14 +150,14 @@ impl Junction {
             contig: string[utils::get_header!("contig", header)].to_string(),
             gene: string[utils::get_header!("gene_name", header)].to_string(),
             transcript: string[utils::get_header!("transcript_name", header)].to_string(),
-            donnor: pos.to_string(),
+            Donor: pos.to_string(),
             acceptor: next.to_string(),
             ambiguous: if string[utils::get_header!("ambiguous", header)] == "true" {
                 true
             } else {
                 false
             },
-            intron_number: if exon_type == "Donnor" {
+            intron_number: if exon_type == "Donor" {
                 exon_n
             } else {
                 exon_n - 1
@@ -215,7 +215,7 @@ pub fn junction_file_from_table(table_file: &str, junction_file: &str) -> Result
             .collect::<Vec<&str>>()[1]
             .parse::<u16>()
             .expect("unable to parse exon number junction");
-        intron_n = if exon_type == "Donnor" {
+        intron_n = if exon_type == "Donor" {
             exon_n
         } else {
             exon_n - 1
@@ -237,7 +237,7 @@ pub fn junction_file_from_table(table_file: &str, junction_file: &str) -> Result
 
     junctions.sort_by_key(|x| (&x.gene, &x.transcript, x.intron_number));
 
-    out_file_open.write_all("Contig\tGene\tTranscript\tIntron\tDonnor\tAcceptor\tStrand\tAmbiguous\tspliced\tunspliced\tclipped\texon_other\tskipped\twrong_strand\te_isoform\n".as_bytes());
+    out_file_open.write_all("Contig\tGene\tTranscript\tIntron\tDonor\tAcceptor\tStrand\tAmbiguous\tspliced\tunspliced\tclipped\texon_other\tskipped\twrong_strand\te_isoform\n".as_bytes());
     for j in junctions {
         out_file_open.write_all(format!("{}\n", j.dump()).as_bytes());
     }

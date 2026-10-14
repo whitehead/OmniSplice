@@ -233,8 +233,8 @@ pub fn parse_js_file(file_path: &str, result: &mut HashMap<String, JunctionStats
             gene = format!("{}_{}_{}", spt[*header.get("Gene").unwrap()], spt[*header.get("Transcript").unwrap()], spt[*header.get("Intron").unwrap()]);
             contig = spt[*header.get("Contig").unwrap()].to_string();
             strand = spt[*header.get("Strand").unwrap()].to_string();
-            start = if strand == "+" {spt[*header.get("Donnor").unwrap()].to_string()} else {spt[*header.get("Acceptor").unwrap()].to_string()};
-            end = if strand == "+" {spt[*header.get("Acceptor").unwrap()].to_string()} else {spt[*header.get("Donnor").unwrap()].to_string()};
+            start = if strand == "+" {spt[*header.get("Donor").unwrap()].to_string()} else {spt[*header.get("Acceptor").unwrap()].to_string()};
+            end = if strand == "+" {spt[*header.get("Acceptor").unwrap()].to_string()} else {spt[*header.get("Donor").unwrap()].to_string()};
             
             key = format!("{} {} {} {}", contig, strand, start, end);
 
@@ -548,7 +548,7 @@ fn run_one_test(junction: &HashMap<String, JunctionStats>,
 
 
             if !pass_min_read(min_cover, min_fail,(&ctrl_suc, &ctrl_fail, &treat_suc, &treat_fail)){return  None}
-            if j.ambiguous == true && ambi == true {return None}
+            if j.ambiguous == false && ambi == true {return None}
 
             let mut f= vec![j.get_pos_string()];
             f.push(if j.ambiguous {"true".to_string()} else {"false".to_string()});

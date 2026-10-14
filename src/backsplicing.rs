@@ -151,13 +151,13 @@ fn get_sofclipped_seq(
     let l = seq.len();
     let mut r: Option<String> = Some("".to_string());
     match (exon_type, strand) {
-        (ExonType::Donnor, Strand::Plus) | (ExonType::Acceptor, Strand::Minus) => {
+        (ExonType::Donor, Strand::Plus) | (ExonType::Acceptor, Strand::Minus) => {
             if let Some(n) = cig.get_soft_clipped_n(&Strand::Plus) {
                 //println!("P {:?}", n);
                 r = Some(seq[l - n as usize..l].to_string())
             }
         }
-        (ExonType::Acceptor, Strand::Plus) | (ExonType::Donnor, Strand::Minus) => {
+        (ExonType::Acceptor, Strand::Plus) | (ExonType::Donor, Strand::Minus) => {
             if let Some(n) = cig.get_soft_clipped_n(&Strand::Minus) {
                 //println!("M {:?} {:?}", n, cig);
                 r = Some(seq[0..n as usize].to_string())
@@ -297,12 +297,12 @@ fn get_gtf_clipped(gtf: &str) -> Result<HashMap<String, PointContainer>, Box<dyn
             }
             Strand::Minus => {
                 start -= 1;
-                ExonType::Donnor
+                ExonType::Donor
             }
         };
 
         let end_type = match strand {
-            Strand::Plus | Strand::NA => ExonType::Donnor,
+            Strand::Plus | Strand::NA => ExonType::Donor,
             Strand::Minus => ExonType::Acceptor,
         };
 
@@ -343,9 +343,9 @@ fn get_gtf_clipped(gtf: &str) -> Result<HashMap<String, PointContainer>, Box<dyn
 #[derive(Clone, Debug)]
 pub struct BackSplicingCounter {
     gene: String,
-    support_donnor: i64, // should I use hashset read name?
+    support_Donor: i64, // should I use hashset read name?
     support_acceptor: i64,
-    tot_donnor: i64,
+    tot_Donor: i64,
     tot_acceptor: i64,
     strand: Strand, //
     prime3: i64,
@@ -356,9 +356,9 @@ pub struct BackSplicingCounter {
 impl BackSplicingCounter {
     fn new(strand: Strand, prime5: i64, prime3: i64, contig: String, gene: String) -> Self {
         BackSplicingCounter {
-            support_donnor: 0,
+            support_Donor: 0,
             support_acceptor: 0,
-            tot_donnor: 0,
+            tot_Donor: 0,
             tot_acceptor: 0,
             strand: strand,
             prime3: prime3,
@@ -367,8 +367,8 @@ impl BackSplicingCounter {
             gene: gene,
         }
     }
-    fn add_support_donnor(&mut self) -> () {
-        self.support_donnor += 1;
+    fn add_support_Donor(&mut self) -> () {
+        self.support_Donor += 1;
     }
     fn add_support_acceptor(&mut self) -> () {
         self.support_acceptor += 1;
@@ -376,23 +376,23 @@ impl BackSplicingCounter {
     fn add_tot_acceptor(&mut self) -> () {
         self.tot_acceptor += 1;
     }
-    fn add_tot_donnor(&mut self) -> () {
-        self.tot_donnor += 1;
+    fn add_tot_Donor(&mut self) -> () {
+        self.tot_Donor += 1;
     }
     fn get_support(&self) -> i64 {
-        self.support_donnor + self.support_acceptor
+        self.support_Donor + self.support_acceptor
     }
     fn prettydump(&self) -> () {
         println!(
             "{}",
             &format!(
-                "Position: {}:{}-{}({}), Total Support: {}, Donnor Support: {}, Acceptor Support: {}",
+                "Position: {}:{}-{}({}), Total Support: {}, Donor Support: {}, Acceptor Support: {}",
                 self.contig,
                 self.prime5,
                 self.prime3,
                 self.strand,
-                self.support_acceptor + self.support_donnor,
-                self.support_donnor,
+                self.support_acceptor + self.support_Donor,
+                self.support_Donor,
                 self.support_acceptor
             )
         );
@@ -416,7 +416,7 @@ impl fmt::Display for BackSplicingCounter {
                 self.prime3,
                 self.strand,
                 self.get_support(),
-                self.support_donnor,
+                self.support_Donor,
                 self.support_acceptor
             )
         )
@@ -516,7 +516,7 @@ pub fn parse_bam(
                             })
                             .add_support_acceptor();
                     } else if (tr_junction.strand == Strand::Minus)
-                        & (tr_junction.exon_type == ExonType::Donnor)
+                        & (tr_junction.exon_type == ExonType::Donor)
                     {
                         results
                             .entry((contig.clone(), pos_s, original_map_info.pos))
@@ -529,14 +529,14 @@ pub fn parse_bam(
                                     original_map_info.gene.clone(),
                                 )
                             })
-                            .add_support_donnor();
+                            .add_support_Donor();
                     } else {
                         println!("{} {}", tr_junction.strand, tr_junction.exon_type);
                         continue;
                     }
                 } else if (tr_junction.pos == pos_e) & (pos_s > original_map_info.pos) {
                     if (tr_junction.strand == Strand::Plus)
-                        & (tr_junction.exon_type == ExonType::Donnor)
+                        & (tr_junction.exon_type == ExonType::Donor)
                     {
                         results
                             .entry((contig.clone(), original_map_info.pos, pos_e))
@@ -549,7 +549,7 @@ pub fn parse_bam(
                                     original_map_info.gene.clone(),
                                 )
                             })
-                            .add_support_donnor();
+                            .add_support_Donor();
                     } else if (tr_junction.strand == Strand::Minus)
                         & (tr_junction.exon_type == ExonType::Acceptor)
                     {

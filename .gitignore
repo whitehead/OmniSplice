@@ -1,2 +1,7 @@
 target
 common_python/__pycache__
+
+
+compare_two_groups.py
+compare_two_groups_wrapper.py
+post_analyses.py

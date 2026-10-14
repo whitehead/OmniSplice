@@ -328,12 +328,12 @@ pub fn read_gtf(file: &str) -> Result<HashMap<String, PointContainer>, Box<dyn E
             }
             Strand::Minus => {
                 start -= 1;
-                ExonType::Donnor
+                ExonType::Donor
             }
         };
 
         let end_type = match strand {
-            Strand::Plus | Strand::NA => ExonType::Donnor,
+            Strand::Plus | Strand::NA => ExonType::Donor,
             Strand::Minus => ExonType::Acceptor,
         };
 

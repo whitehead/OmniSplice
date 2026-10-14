@@ -16,8 +16,8 @@ class Junction():
         self.contig = spt[header["Contig"]]
         self.strand = spt[header["Strand"]]
 
-        self.pos =  spt[header["Donnor"]] if spt[header["Strand"]] == "+" else spt[header["Acceptor"]] 
-        self.next = spt[header["Acceptor"]] if spt[header["Strand"]] == "+" else spt[header["Donnor"]]
+        self.pos =  spt[header["Donor"]] if spt[header["Strand"]] == "+" else spt[header["Acceptor"]] 
+        self.next = spt[header["Acceptor"]] if spt[header["Strand"]] == "+" else spt[header["Donor"]]
 
 
         self.ambiguous = True if spt[header["Ambiguous"]] == "true" else False
@@ -167,8 +167,8 @@ def parse_js_file(file, results, genotype, ambiguous=False, gene_list=None, tran
                         
             contig = spt[header["Contig"]]
             strand = spt[header["Strand"]]
-            pos =  spt[header["Donnor"]] if spt[header["Strand"]] == "+" else spt[header["Acceptor"]] 
-            next = spt[header["Acceptor"]] if spt[header["Strand"]] == "+" else spt[header["Donnor"]]
+            pos =  spt[header["Donor"]] if spt[header["Strand"]] == "+" else spt[header["Acceptor"]] 
+            next = spt[header["Acceptor"]] if spt[header["Strand"]] == "+" else spt[header["Donor"]]
             
             hash_key = (contig, strand, pos, next)
             #if spt[header["Transcript"]] == "ENSMUST00000155989":
@@ -190,12 +190,12 @@ class TestCounter(unittest.TestCase):
         header = "contig  gene_name       transcript_name exon_number     ambiguous       strand  pos     next    exon_type       spliced unspliced       clipped exon_intron     exon_other      skipped wrong_strand    e_isoform".split()
         header = dict((k, i) for i, k in enumerate(header))
 
-        spt = "3R      FBgn0037773     FBtr0082215     exon_2  true    -       10000572        10000368        Donnor  222     19      1       0       0       1       33   548".split()      
-        pos_1 =  spt[header["pos"]] if spt[header["exon_type"]] == "Donnor" else spt[header["next"]] 
-        next_1 = spt[header["next"]] if spt[header["exon_type"]] == "Donnor" else spt[header["pos"]]
+        spt = "3R      FBgn0037773     FBtr0082215     exon_2  true    -       10000572        10000368        Donor  222     19      1       0       0       1       33   548".split()      
+        pos_1 =  spt[header["pos"]] if spt[header["exon_type"]] == "Donor" else spt[header["next"]] 
+        next_1 = spt[header["next"]] if spt[header["exon_type"]] == "Donor" else spt[header["pos"]]
         spt = "3R      FBgn0037773     FBtr0082215     exon_3  false   -       10000368        10000572        Acceptor        222     8       0       0       0       1       31      0".split()
-        pos_2 =  spt[header["pos"]] if spt[header["exon_type"]] == "Donnor" else spt[header["next"]] 
-        next_2 = spt[header["next"]] if spt[header["exon_type"]] == "Donnor" else spt[header["pos"]]
+        pos_2 =  spt[header["pos"]] if spt[header["exon_type"]] == "Donor" else spt[header["next"]] 
+        next_2 = spt[header["next"]] if spt[header["exon_type"]] == "Donor" else spt[header["pos"]]
         self.assertEqual(pos_1, pos_2)
         self.assertEqual(next_1, next_2)
         print(pos_1, pos_2, next_1, next_2)
@@ -204,7 +204,7 @@ class TestCounter(unittest.TestCase):
         header = "contig  gene_name       transcript_name exon_number     ambiguous       strand  pos     next    exon_type       spliced unspliced       clipped exon_intron     exon_other      skipped wrong_strand    e_isoform".split()
         header = dict((k, i) for i, k in enumerate(header))
 
-        X = """3R      FBgn0037773     FBtr0082215     exon_2  true    -       10000572        10000368        Donnor  222     19      1       0       0       1       33      548""".split()
+        X = """3R      FBgn0037773     FBtr0082215     exon_2  true    -       10000572        10000368        Donor  222     19      1       0       0       1       33      548""".split()
         X2 = """3R      FBgn0037773     FBtr0082215     exon_3  false   -       10000368        10000572        Acceptor        222     8       0       0       0       1       31      0""".split()
         j = Junction(spt=X, header=header, basename="f1", genotype="control")
         j.update_count(X2, genotype="control", header=header, basename="f1")
@@ -214,7 +214,7 @@ class TestCounter(unittest.TestCase):
         header = "contig  gene_name       transcript_name exon_number     ambiguous       strand  pos     next    exon_type       spliced unspliced       clipped exon_intron     exon_other      skipped wrong_strand    e_isoform".split()
         header = dict((k, i) for i, k in enumerate(header))
 
-        X = """3R      FBgn0037773     FBtr0082215     exon_2  true    -       10000572        10000368        Donnor  222     19      1       0       0       1       33      548""".split()
+        X = """3R      FBgn0037773     FBtr0082215     exon_2  true    -       10000572        10000368        Donor  222     19      1       0       0       1       33      548""".split()
         X2 = """3R      FBgn0037773     FBtr0082215     exon_3  false   -       10000368        10000572        Acceptor        222     8       0       0       0       1       31      0""".split()
         j = Junction(spt=X, header=header, basename="f2", genotype="treatment")
         j.update_count(X2, genotype="treatment", header=header, basename="f2")
@@ -230,7 +230,7 @@ class TestCounter(unittest.TestCase):
 """     
     def get_count(self, type):
     
-        type = [Acceptor, Donnor, Both]
+        type = [Acceptor, Donor, Both]
         
         control = []
         treatment = []

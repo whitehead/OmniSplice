@@ -88,7 +88,7 @@ impl ReadtRecord {
 
                     match (self.strand, self.exon_type, next_acceptor) {
                         (_, _, None) => (),
-                        (Strand::Plus | Strand::NA, ExonType::Donnor, Some(next))
+                        (Strand::Plus | Strand::NA, ExonType::Donor, Some(next))
                         | (Strand::Minus, ExonType::Acceptor, Some(next)) => {
                             if next == end {
                                 spliced = spliced + elem.1;
@@ -100,7 +100,7 @@ impl ReadtRecord {
                                 exon_other = exon_other + elem.1;
                             }
                         }
-                        (Strand::Minus, ExonType::Donnor, Some(next))
+                        (Strand::Minus, ExonType::Donor, Some(next))
                         | (Strand::Plus | Strand::NA, ExonType::Acceptor, Some(next)) => {
                             if next == start {
                                 spliced = spliced + elem.1;
@@ -212,8 +212,8 @@ impl ReadtRecordContainer {
 
             if (indice + 1 < size) && (indice > 0) {
                 match (self.strand, &junction.exon_type) {
-                    (Strand::Plus | Strand::NA, ExonType::Donnor)
-                    | (Strand::Minus, ExonType::Donnor) => {
+                    (Strand::Plus | Strand::NA, ExonType::Donor)
+                    | (Strand::Minus, ExonType::Donor) => {
                         next = Some(self.container[indice + 1].pos);
                     }
                     (Strand::Plus | Strand::NA, ExonType::Acceptor)

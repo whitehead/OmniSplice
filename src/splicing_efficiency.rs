@@ -68,7 +68,7 @@ impl SplicingChoice {
 /// it is to replicate and more the exact formual of spilcinge
 //
 // we want to support:
-// - either Donnor only Acceptor only or both
+// - either Donor only Acceptor only or both
 // - we want to support the combination of different fields. "unspliced" + "exon_other" ...
 //
 
@@ -77,20 +77,20 @@ struct Intron {
     gene: String,
     transcript: String,
     intron_number: u16,
-    donnor: String,
+    Donor: String,
     acceptor: String,
     strand: Strand,
     spliced: u32,
     unspliced: u32,
     // TODO [FUTURE] [IMPROVMENT] may be parse the matching table file and give the details:
-    // unspliced_donnor: u32,
+    // unspliced_Donor: u32,
     // unspliced_acceptor: u32,
     // unspliced_common: u32
 }
 
 impl Intron {
     fn new(spt: &Vec<String>, counter: &Counter) -> Self {
-        let donnor = spt[4].clone();
+        let Donor = spt[4].clone();
         let acceptor = spt[5].clone();
 
         let (spliced, unspliced) = counter.count(spt);
@@ -102,7 +102,7 @@ impl Intron {
             gene: spt[1].to_string(),
             transcript: spt[2].to_string(),
             intron_number: intron_n,
-            donnor: donnor.to_string(),
+            Donor: Donor.to_string(),
             acceptor: acceptor.to_string(),
             strand: Strand::from(spt[6].as_str()),
             spliced: spliced,
@@ -117,7 +117,7 @@ impl Intron {
             format!(
                 "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
                 self.contig,
-                self.donnor,
+                self.Donor,
                 self.acceptor,
                 self.strand,
                 self.gene,
@@ -132,7 +132,7 @@ impl Intron {
             format!(
                 "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
                 self.contig,
-                self.donnor,
+                self.Donor,
                 self.acceptor,
                 self.strand,
                 self.gene,
@@ -213,7 +213,7 @@ pub fn to_se_from_junction(
 
     let mut dict: HashMap<String, Intron> = HashMap::new();
 
-    let mut donnor: u32; // = 0;
+    let mut Donor: u32; // = 0;
     let mut acceptor: u32; // = 0;
 
     let f = File::open(file).unwrap();
@@ -238,7 +238,7 @@ pub fn to_se_from_junction(
             continue;
         }
 
-        donnor = match spt[4].parse::<u32>() {
+        Donor = match spt[4].parse::<u32>() {
             Ok(x) => x,
             Err(x) => {
                 println!("{:?}", spt);
@@ -253,7 +253,7 @@ pub fn to_se_from_junction(
             }
         };
 
-        key = format!("{}_{}_{}_{}_{}", spt[0], spt[1], spt[2], donnor, acceptor);
+        key = format!("{}_{}_{}_{}_{}", spt[0], spt[1], spt[2], Donor, acceptor);
         dict.insert(key, Intron::new(&spt, &counter));
     }
 

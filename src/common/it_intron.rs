@@ -524,10 +524,10 @@ impl TreeDataIntron {
     fn dump_junction_base(&self, ambiguous: bool) -> Vec<String> {
         let mut res = Vec::new();
         let mut exontype = ExonType::Acceptor;
-        // get acceptor donnor!
+        // get acceptor Donor!
 
         let mut pos = 0;
-        let (donnor, acceptor) = self.get_acceptor_donor();
+        let (Donor, acceptor) = self.get_acceptor_donor();
 
         /*let ambiguous = if ambiguous_set.contains(&(self.contig.clone(), self.start.unwrap_or(0)))
             | ambiguous_set.contains(&(self.contig.clone(), self.end.unwrap_or(0)))
@@ -544,7 +544,7 @@ impl TreeDataIntron {
                 self.gene_name,
                 tr,
                 intron,
-                donnor,
+                Donor,
                 acceptor,
                 self.strand,
                 ambiguous.to_string()
@@ -601,10 +601,10 @@ impl TreeDataIntron {
 
         let mut res = Vec::new();
         let mut exontype = ExonType::Acceptor;
-        // get acceptor donnor!
+        // get acceptor Donor!
 
         let mut pos = 0;
-        //let (donnor, acceptor) = self.get_acceptor_donor();
+        //let (Donor, acceptor) = self.get_acceptor_donor();
 
         // Contig Gene Transcript Exon_number Exon_type Position Next Strand Ambiguous
       
@@ -622,7 +622,7 @@ impl TreeDataIntron {
                 tr,
                 match self.end_type{
                     Some(ExonType::Acceptor) => *intron + 1,
-                    Some(ExonType::Donnor) => *intron,
+                    Some(ExonType::Donor) => *intron,
                     None => {error!("expected value for end type found None"); return Err(OmniError::Expect("value expected for self end type None found".to_string()))}
                 },
                 self.end_type.ok_or_else(|| {error!("expected value for end type found None"); OmniError::Expect("value expected None found".to_string())})?,
@@ -646,7 +646,7 @@ impl TreeDataIntron {
                 tr,
                 match self.start_type{
                     Some(ExonType::Acceptor) => *intron + 1,
-                    Some(ExonType::Donnor) => *intron,
+                    Some(ExonType::Donor) => *intron,
                     None => {error!("expected value for start type found None"); return Err(OmniError::Expect("value expected None found".to_string()))}
                 },
                 self.start_type.ok_or_else(|| {error!("expected value for start type found None"); OmniError::Expect("value expected None found".to_string())})?,
@@ -738,10 +738,10 @@ pub fn interval_tree_from_gtfmap(
             while cpt < exons.len() {
                 let mut end_type = Some(ExonType::Acceptor);
                 if strand == Strand::Minus {
-                    end_type = Some(ExonType::Donnor);
+                    end_type = Some(ExonType::Donor);
                 }
 
-                let mut start_type = Some(ExonType::Donnor);
+                let mut start_type = Some(ExonType::Donor);
                 if strand == Strand::Minus {
                     start_type = Some(ExonType::Acceptor);
                 }
@@ -827,10 +827,10 @@ pub fn interval_tree_from_gtfmap(
 
                 let mut end_type = Some(ExonType::Acceptor);
                 if strand == Strand::Minus {
-                    end_type = Some(ExonType::Donnor);
+                    end_type = Some(ExonType::Donor);
                 }
 
-                let mut start_type = Some(ExonType::Donnor);
+                let mut start_type = Some(ExonType::Donor);
                 if strand == Strand::Minus {
                     start_type = Some(ExonType::Acceptor);
                 }
@@ -1078,7 +1078,7 @@ pub fn dump_tree_into_raw_exon_junction(
     let header_raw =
         "Contig\tPosition\tGeneID\tTranscriptID\tstrand\tExonEndType\tCategory\tReadCount\n"
             .as_bytes();
-    let header_junction = "Contig\tGene\tTranscript\tIntron\tDonnor\tAcceptor\tStrand\tAmbiguous\tSpliced\tUnspliced\tClipped\tExon_other\tSkipped\tSkippedUnrelated\tWrong_strand\tE_isoform\n".as_bytes();
+    let header_junction = "Contig\tGene\tTranscript\tIntron\tDonor\tAcceptor\tStrand\tAmbiguous\tSpliced\tUnspliced\tClipped\tExon_other\tSkipped\tSkippedUnrelated\tWrong_strand\tE_isoform\n".as_bytes();
     let header_exons = "Contig\tGene\tTranscript\tExon_number\tExon_type\tPosition\tNext\tStrand\tAmbiguous\tSpliced\tUnspliced\tClipped\tExon_other\tSkipped\tSkippedUnrelated\tWrong_strand\tE_isoform\n".as_bytes();
 
     {
@@ -1170,7 +1170,7 @@ pub fn dump_tree_to_cat_results(
     let header_cat =
         "Contig\tPosition\tGeneID\tTranscriptID\tstrand\tExonEndType\tCategory\tReadCount\n"
             .as_bytes();
-    let header_j = "Contig\tGene\tTranscript\tIntron\tDonnor\tAcceptor\tStrand\tAmbiguous\tspliced\tunspliced\tclipped\texon_other\tskipped\twrong_strand\te_isoform\n".as_bytes();
+    let header_j = "Contig\tGene\tTranscript\tIntron\tDonor\tAcceptor\tStrand\tAmbiguous\tspliced\tunspliced\tclipped\texon_other\tskipped\twrong_strand\te_isoform\n".as_bytes();
 
     {
         let file_cat =
@@ -1299,7 +1299,7 @@ mod tests_it {
             Strand::Minus,
             Some(21681343),
             Some(21681345),
-            Some(ExonType::Donnor),
+            Some(ExonType::Donor),
             21681343,
             21681343 + 188,
             &Cigar::from("63S188M"),

@@ -91,9 +91,7 @@ struct Args {
     flag_out: u16,
     #[arg(long, default_value_t = 13, help_heading = "QC Options")]
     mapq: u8,
-    /// space separated list of the annotated read you want to extract (This is relative to the exon); i.e. all clipped read or all spliced read ...
-    /// Junction reads are further divided see read_to_write_junc
-    /// 
+    /// mostly deprecated, sue read_to_write_junc instead,  only usage is for Backsplicing detection with clipped value. output reads abased on exon end category.
     #[clap(long, value_parser, value_delimiter = ' ', num_args = 1.., help_heading = "Output Options")]
     read_to_write: Vec<ReadsToWrite>,
     /// space separated list of the spliceEvent read you want to extract ( This is relative to the junctions); i.e. all Spliced, exon_other...

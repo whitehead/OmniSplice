@@ -455,14 +455,14 @@ pub fn update_read_to_write_handle(
 
 #[derive(Clone, Debug, Copy, Eq, Hash, PartialEq)]
 pub enum ExonType {
-    Donnor,
+    Donor,
     Acceptor,
 }
 
 impl fmt::Display for ExonType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ExonType::Donnor => {
+            ExonType::Donor => {
                 write!(f, "Donor")
             }
             ExonType::Acceptor => {
@@ -475,7 +475,7 @@ impl fmt::Display for ExonType {
 impl From<&str> for ExonType {
     fn from(item: &str) -> Self {
         match item {
-            "Donnor" => ExonType::Donnor,
+            "Donor" => ExonType::Donor,
             "Acceptor" => ExonType::Acceptor,
             &_ => {
                 println!("{}", item);
@@ -1164,7 +1164,7 @@ mod tests_it {
             Strand::Minus,
             Some(5334258),
             Some(5334402),
-            Some(ExonType::Donnor),
+            Some(ExonType::Donor),
             5333978,
             5334283,
             &Cigar::from("225M55N26M"),
@@ -1189,7 +1189,7 @@ mod tests_it {
             Strand::Plus,
             Some(883160),
             Some(883060),
-            Some(ExonType::Donnor),
+            Some(ExonType::Donor),
             883134,
             929452,
             &Cigar::from("27M54N99M46014N125M"),

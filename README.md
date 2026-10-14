@@ -13,6 +13,10 @@ you new reauired R with aod instaled in your path.  by default OmniSplice uses  
 > now can selected to 
 
 
+
+[TOC] 
+
+
 Omnisplice is a tool to categorize all reads present at exon's extremity.
 get more info reading the paper: https://www.biorxiv.org/content/10.1101/2025.04.06.647416v1
 

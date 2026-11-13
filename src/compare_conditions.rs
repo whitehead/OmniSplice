@@ -799,7 +799,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             treatment_files, outfile_prefix, 
             min_read , min_fail, thread, beta_bin} => {
             println!("Running all single comparisons, output: {:?}", outfile_prefix);
-            println!("using logistic model and Fisher test: {}", !beta_bin);
+            println!("using logistic model and Fisher test: {}", beta_bin);
             assert!(thread > 0, "thread must be postive");
 
             rayon::ThreadPoolBuilder::new()
